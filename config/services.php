@@ -35,4 +35,23 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Google OAuth (ingreso de visitantes)
+    |--------------------------------------------------------------------------
+    |
+    | Credenciales de "ID de cliente de OAuth 2.0" de Google Cloud Console.
+    | La URI de redirección debe estar dada de alta ahí EXACTAMENTE igual.
+    |
+    | Si GOOGLE_CLIENT_ID está vacío, el botón no aparece y las rutas
+    | responden 404: el portal funciona igual con registro por correo.
+    |
+    */
+
+    'google' => [
+        'client_id'     => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect'      => env('GOOGLE_REDIRECT_URI', '/auth/google/callback'),
+    ],
+
 ];

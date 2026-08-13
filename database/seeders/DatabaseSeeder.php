@@ -15,7 +15,9 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
-            AuthSeeder::class,
+            AuthSeeder::class,             // roles, 7 permisos base y Super Admin
+            PermisosTaquillaSeeder::class, // 14 permisos operativos (brief §3.3)
+            CatalogosSeeder::class,        // países, estados, municipios, clasificación (brief §5.1)
         ]);
     }
 }

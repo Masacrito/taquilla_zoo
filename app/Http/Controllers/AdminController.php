@@ -3,10 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Cuenta;
-use App\Models\Movimiento;
 use App\Models\Permiso;
 use App\Models\Rol;
 use App\Models\Usuario;
+use App\Services\Auditoria\BitacoraService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -15,6 +15,10 @@ use Illuminate\Support\Facades\Hash;
 class AdminController extends Controller
 {
     private const SUPER_ADMIN_ID = 1;
+
+    public function __construct(private readonly BitacoraService $bitacora)
+    {
+    }
 
     public function dashboard()
     {
@@ -36,9 +40,16 @@ class AdminController extends Controller
             'nombre'   => 'required|string|max:120',
             'puesto'   => 'nullable|string|max:120',
             'email'    => 'nullable|email|max:160',
+            // La regla `unique` consulta la tabla directamente, así que
+            // también choca con cuentas eliminadas lógicamente. Es deliberado:
+            // un username no se reutiliza, para que la bitácora no quede
+            // ambigua. El mensaje lo explica, porque esas cuentas no aparecen
+            // en el listado.
             'username' => 'required|string|max:60|unique:cuentas,username',
             'password' => 'required|string|min:6',
             'id_rol'   => 'required|exists:roles,id_rol',
+        ], [
+            'username.unique' => 'Ese username ya fue usado, incluso si la cuenta fue eliminada. Los usernames no se reutilizan.',
         ]);
 
         // Solo Super Admin puede crear Administradores
@@ -61,10 +72,9 @@ class AdminController extends Controller
                 'id_rol'     => $request->id_rol,
             ]);
 
-            Movimiento::registrar(
-                Auth::user()->id_cuenta,
+            $this->bitacora->registrar(
                 'cuentas',
-                'CREATE',
+                BitacoraService::CREATE,
                 (string) $cuenta->id_cuenta,
                 ['username' => $cuenta->username, 'id_rol' => (int) $cuenta->id_rol]
             );
@@ -99,10 +109,9 @@ class AdminController extends Controller
             $passwordCambiado = true;
         }
 
-        Movimiento::registrar(
-            Auth::user()->id_cuenta,
+        $this->bitacora->registrar(
             'cuentas',
-            'UPDATE',
+            BitacoraService::UPDATE,
             (string) $cuenta->id_cuenta,
             ['nombre' => $request->nombre, 'password_cambiado' => $passwordCambiado]
         );
@@ -127,10 +136,9 @@ class AdminController extends Controller
         $cuenta->id_rol = $request->id_rol;
         $cuenta->save();
 
-        Movimiento::registrar(
-            Auth::user()->id_cuenta,
+        $this->bitacora->registrar(
             'cuentas',
-            'UPDATE',
+            BitacoraService::UPDATE,
             (string) $cuenta->id_cuenta,
             ['id_rol_anterior' => $rolAnterior, 'id_rol_nuevo' => (int) $cuenta->id_rol]
         );
@@ -154,10 +162,9 @@ class AdminController extends Controller
 
         $cuenta->actualizarPermisos($request->permisos ?? []);
 
-        Movimiento::registrar(
-            Auth::user()->id_cuenta,
+        $this->bitacora->registrar(
             'rol_permiso',
-            'UPDATE',
+            BitacoraService::UPDATE,
             (string) $cuenta->id_rol,
             ['permisos' => array_map('intval', $request->permisos ?? [])]
         );
@@ -179,10 +186,9 @@ class AdminController extends Controller
         $cuenta->estado = $cuenta->estado === 'activo' ? 'inactivo' : 'activo';
         $cuenta->save();
 
-        Movimiento::registrar(
-            Auth::user()->id_cuenta,
+        $this->bitacora->registrar(
             'cuentas',
-            'UPDATE',
+            BitacoraService::UPDATE,
             (string) $cuenta->id_cuenta,
             ['estado' => $cuenta->estado]
         );
@@ -204,19 +210,22 @@ class AdminController extends Controller
         $snapshot = [
             'username' => $cuenta->username,
             'id_rol'   => (int) $cuenta->id_rol,
+            'nombre'   => $cuenta->usuario?->nombre,
         ];
         $idCuentaBorrada = (string) $cuenta->id_cuenta;
 
+        // Eliminación lógica (brief §4.6: nada se borra). La cuenta deja de
+        // poder autenticarse porque SoftDeletes excluye los registros
+        // borrados de toda consulta, incluida la del provider de auth.
         DB::transaction(function () use ($cuenta) {
             $usuarioId = $cuenta->id_usuario;
             $cuenta->delete();
             Usuario::where('id_usuario', $usuarioId)->delete();
         });
 
-        Movimiento::registrar(
-            Auth::user()->id_cuenta,
+        $this->bitacora->registrar(
             'cuentas',
-            'DELETE',
+            BitacoraService::DELETE,
             $idCuentaBorrada,
             $snapshot
         );

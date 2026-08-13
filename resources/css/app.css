@@ -1,11 +1,132 @@
 @import 'tailwindcss';
 
+/*
+ * TIPOGRAFÍAS — SUSTITUTOS TEMPORALES
+ * ───────────────────────────────────
+ * El manual "Humanismo que Transforma" especifica Novecento Wide (títulos)
+ * y Gilroy (cuerpo). Ambas son comerciales y su EULA de escritorio prohíbe
+ * la conversión y el embebido web, así que aquí van sustitutos libres
+ * (SIL OFL) auto-hospedados con Fontsource:
+ *
+ *   Novecento Wide  →  Montserrat (geométrica, ancha en mayúsculas)
+ *   Gilroy          →  Inter (diseñada para pantalla, legible en tablas)
+ *
+ * PARA CAMBIARLAS cuando lleguen los webfonts licenciados:
+ *   1. Coloca los .woff2 en public/fonts/
+ *   2. Sustituye estos @import por sus @font-face
+ *   3. Ajusta --font-display y --font-sans en @theme
+ * Ninguna vista necesita cambiar.
+ *
+ * Ambas son variables: un solo archivo cubre todos los pesos.
+ */
+@import '@fontsource-variable/montserrat';
+@import '@fontsource-variable/inter';
+
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 @source '../**/*.blade.php';
 @source '../**/*.js';
 
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+    /* === Paleta oficial (Pantone del manual) === */
+    --color-jade: #009887;         /* ornamentos guerreros mayas — acción primaria */
+    --color-jade-oscuro: #007a6e;  /* hover del jade */
+    --color-jade-suave: #e6f7f5;   /* fondo de badges jade */
+    --color-magenta: #c90166;      /* pueblos originarios — estados especiales */
+    --color-magenta-suave: #fce4f1;
+    --color-cinabrio: #ae192d;     /* mineral de la Reina Roja — solo alertas */
+    --color-cinabrio-suave: #fdecea;
+    --color-arena: #d3c2b4;        /* neutro cálido complementario */
+
+    /* === Sistema de diseño === */
+    --color-fondo: #f7f5f2;
+    --color-superficie: #ffffff;
+    --color-texto: #1f2933;
+    --color-texto-suave: #6b7280;
+    --color-borde: #e5e7eb;
+
+    /* === Tipografía === */
+    --font-display: 'Montserrat Variable', 'Arial Narrow', Arial, sans-serif;
+    --font-sans: 'Inter Variable', Inter, system-ui, sans-serif;
+
+    /* === Formas === */
+    --radius-card: 18px;
+    --radius-input: 12px;
+    --radius-badge: 6px;
+
+    --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.06);
+    --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
+
+/*
+ * Tipografía primaria del manual: siempre en MAYÚSCULAS.
+ * El tracking amplio es lo que da la sensación de ancho de Novecento Wide.
+ */
+@utility titulo {
+    font-family: var(--font-display);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+@layer base {
+    body {
+        background-color: var(--color-fondo);
+        color: var(--color-texto);
+        font-family: var(--font-sans);
+    }
+}
+
+/*
+ * Componentes declarados con @utility (no @layer components): en Tailwind 4
+ * solo las utilidades reales pueden componerse con @apply entre sí.
+ */
+
+/* === Botones === */
+@utility btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-[10px] px-6 py-2.5
+           text-sm font-semibold transition-colors cursor-pointer
+           focus:outline-none focus-visible:ring-3 focus-visible:ring-jade/25;
+}
+@utility btn-primary {
+    @apply btn bg-jade text-white hover:bg-jade-oscuro;
+}
+@utility btn-danger {
+    @apply btn bg-cinabrio text-white hover:bg-cinabrio/90;
+}
+@utility btn-outline {
+    @apply btn border-2 border-jade bg-transparent text-jade hover:bg-jade-suave;
+}
+@utility btn-sm {
+    @apply px-3 py-1.5 text-xs;
+}
+
+/* === Superficies === */
+@utility card {
+    @apply rounded-card border border-borde bg-superficie p-6 shadow-soft;
+}
+
+/* === Formularios === */
+@utility input {
+    @apply w-full rounded-input border-[1.5px] border-borde bg-superficie px-4 py-2.5
+           text-sm text-texto placeholder:text-texto-suave transition-colors
+           focus:border-jade focus:outline-none focus:ring-3 focus:ring-jade/12;
+}
+@utility label {
+    @apply mb-1.5 block text-xs font-medium text-texto-suave;
+}
+
+/* === Badges de estado === */
+@utility badge {
+    @apply inline-block rounded-badge px-2.5 py-1 text-xs font-semibold;
+}
+@utility badge-activo   { @apply badge bg-jade-suave text-jade; }
+@utility badge-inactivo { @apply badge bg-cinabrio-suave text-cinabrio; }
+@utility badge-especial { @apply badge bg-magenta-suave text-magenta; }
+
+/* === Avisos === */
+@utility flash {
+    @apply mb-4 rounded-input px-4 py-3 text-sm;
+}
+@utility flash-ok    { @apply flash bg-jade-suave text-jade; }
+@utility flash-error { @apply flash bg-cinabrio-suave text-cinabrio; }

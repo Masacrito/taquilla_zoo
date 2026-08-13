@@ -14,7 +14,8 @@ return new class extends Migration {
             $table->string('extension', 20)->nullable();
             $table->string('email', 160)->nullable();
             $table->unsignedBigInteger('id_departamento')->nullable();
-            $table->timestamps();
+            $table->timestampsTz();
+            $table->softDeletesTz();   // brief §4.6: nada se borra
         });
     }
 

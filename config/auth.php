@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Cliente;
 use App\Models\Cuenta;
 
 return [
@@ -17,7 +18,7 @@ return [
 
     'defaults' => [
         'guard' => env('AUTH_GUARD', 'web'),
-        'passwords' => env('AUTH_PASSWORD_BROKER', 'users'),
+        'passwords' => env('AUTH_PASSWORD_BROKER', 'cuentas'),
     ],
 
     /*
@@ -37,10 +38,20 @@ return [
     |
     */
 
+    // Dos poblaciones que no se mezclan nunca (brief §3.2):
+    //   web     → personal interno (Administrador, Taquilla)
+    //   cliente → visitantes del portal público
+    // Un cliente jamás debe alcanzar /admin/*; una cuenta interna jamás
+    // debe poder comprar. El aislamiento lo da el guard, no el middleware.
     'guards' => [
         'web' => [
             'driver' => 'session',
-            'provider' => 'users',
+            'provider' => 'cuentas',
+        ],
+
+        'cliente' => [
+            'driver' => 'session',
+            'provider' => 'clientes',
         ],
     ],
 
@@ -62,15 +73,15 @@ return [
     */
 
     'providers' => [
-        'users' => [
+        'cuentas' => [
             'driver' => 'eloquent',
-            'model' => env('AUTH_MODEL', Cuenta::class),
+            'model' => Cuenta::class,
         ],
 
-        // 'users' => [
-        //     'driver' => 'database',
-        //     'table' => 'users',
-        // ],
+        'clientes' => [
+            'driver' => 'eloquent',
+            'model' => Cliente::class,
+        ],
     ],
 
     /*
@@ -92,9 +103,15 @@ return [
     |
     */
 
+    // El personal interno no restablece contraseña por correo: lo hace un
+    // Administrador desde el panel. Este broker queda declarado por coherencia
+    // con `defaults.passwords`, pero no hay flujo que lo use.
+    //
+    // El broker de `clientes` se agrega en Fase 2, junto con el registro y la
+    // verificación de correo.
     'passwords' => [
-        'users' => [
-            'provider' => 'users',
+        'cuentas' => [
+            'provider' => 'cuentas',
             'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
             'expire' => 60,
             'throttle' => 60,

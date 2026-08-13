@@ -1,167 +1,175 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión de usuarios</title>
-    <style>
-        body { font-family: system-ui, sans-serif; margin: 0; }
-        header { padding: 1rem 2rem; background: #1e3a8a; color: #fff; display: flex; justify-content: space-between; align-items: center; }
-        main { padding: 2rem; }
-        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
-        th, td { padding: 0.6rem 0.8rem; border-bottom: 1px solid #e5e7eb; text-align: left; vertical-align: top; }
-        th { background: #f3f4f6; }
-        .badge { padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; }
-        .badge-activo { background: #d1fae5; color: #065f46; }
-        .badge-inactivo { background: #fee2e2; color: #991b1b; }
-        .flash { padding: 0.7rem 1rem; border-radius: 6px; margin-bottom: 1rem; }
-        .flash-ok { background: #d1fae5; color: #065f46; }
-        .flash-err { background: #fee2e2; color: #991b1b; }
-        form.inline { display: inline; margin: 0; }
-        button { cursor: pointer; }
-        details { margin-top: 0.4rem; }
-        summary { cursor: pointer; font-size: 0.85rem; color: #1e3a8a; }
-        .perm-list { display: grid; gap: 0.2rem; margin: 0.5rem 0; font-size: 0.85rem; }
-    </style>
-</head>
-<body>
-    <header>
-        <strong>Gestión de usuarios</strong>
-        <a href="{{ route('admin.dashboard') }}" style="color:#fff;">← Volver</a>
-    </header>
+@extends('layouts.interno')
 
-    <main>
-        @if (session('success'))
-            <div class="flash flash-ok">{{ session('success') }}</div>
-        @endif
-        @if (session('error'))
-            <div class="flash flash-err">{{ session('error') }}</div>
-        @endif
+@section('titulo', 'Gestión de usuarios')
+@section('subtitulo', 'Cuentas internas del sistema')
 
-        @if ($errors->any())
-            <div class="flash flash-err">
-                <ul style="margin:0; padding-left:1.2rem;">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
+@section('contenido')
 
-        @if (auth()->user()->puedeCrearUsuarios())
-        <details>
-            <summary><strong>+ Nuevo usuario</strong></summary>
-            <form method="POST" action="{{ route('admin.users.store') }}" style="margin-top:1rem; display:grid; gap:0.5rem; max-width:480px;">
+    @if (auth()->user()->puedeCrearUsuarios())
+        <details class="card mb-6">
+            <summary class="titulo cursor-pointer text-sm text-jade">+ Nuevo usuario</summary>
+
+            <form method="POST" action="{{ route('admin.users.store') }}"
+                  class="mt-5 grid max-w-2xl gap-4 sm:grid-cols-2">
                 @csrf
-                <input type="text" name="nombre" placeholder="Nombre completo" value="{{ old('nombre') }}" required>
-                <input type="text" name="puesto" placeholder="Puesto (opcional)" value="{{ old('puesto') }}">
-                <input type="email" name="email" placeholder="Email (opcional)" value="{{ old('email') }}">
-                <input type="text" name="username" placeholder="Username" value="{{ old('username') }}" required>
-                <input type="password" name="password" placeholder="Contraseña (mín. 6)" required>
-                <select name="id_rol" required>
-                    <option value="">— Rol —</option>
-                    @foreach ($roles as $rol)
-                        <option value="{{ $rol->id_rol }}">{{ $rol->nombre }}</option>
-                    @endforeach
-                </select>
-                <button type="submit">Crear</button>
+
+                <div>
+                    <label class="label">Nombre completo</label>
+                    <input type="text" name="nombre" class="input" value="{{ old('nombre') }}" required>
+                </div>
+                <div>
+                    <label class="label">Puesto</label>
+                    <input type="text" name="puesto" class="input" value="{{ old('puesto') }}">
+                </div>
+                <div>
+                    <label class="label">Correo</label>
+                    <input type="email" name="email" class="input" value="{{ old('email') }}">
+                </div>
+                <div>
+                    <label class="label">Rol</label>
+                    <select name="id_rol" class="input" required>
+                        <option value="">— Seleccionar —</option>
+                        @foreach ($roles as $rol)
+                            <option value="{{ $rol->id_rol }}" @selected(old('id_rol') == $rol->id_rol)>{{ $rol->nombre }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
+                    <label class="label">Username</label>
+                    <input type="text" name="username" class="input" value="{{ old('username') }}" required autocomplete="off">
+                </div>
+                <div>
+                    <label class="label">Contraseña (mín. 6)</label>
+                    <input type="password" name="password" class="input" required autocomplete="new-password">
+                </div>
+
+                <div class="sm:col-span-2">
+                    <button type="submit" class="btn-primary">Crear usuario</button>
+                </div>
             </form>
         </details>
-        @endif
+    @endif
 
-        <table>
-            <thead>
-                <tr>
-                    <th>ID</th><th>Nombre</th><th>Username</th><th>Rol</th><th>Estado</th><th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach ($cuentas as $cuenta)
-                    @php $esYo = $cuenta->id_cuenta === auth()->user()->id_cuenta; @endphp
-                    <tr>
-                        <td>{{ $cuenta->id_cuenta }}</td>
-                        <td>{{ $cuenta->usuario->nombre }}</td>
-                        <td>{{ $cuenta->username }}</td>
-                        <td>
-                            {{ $cuenta->rol->nombre }}
-
-                            @if (! $esYo && auth()->user()->puedeCambiarRoles())
-                                <form class="inline" method="POST" action="{{ route('admin.users.update-role', $cuenta->id_cuenta) }}">
-                                    @csrf @method('PUT')
-                                    <select name="id_rol" onchange="this.form.submit()">
-                                        @foreach ($roles as $rol)
-                                            <option value="{{ $rol->id_rol }}" @selected($rol->id_rol === $cuenta->id_rol)>{{ $rol->nombre }}</option>
-                                        @endforeach
-                                    </select>
-                                    <noscript><button type="submit">Cambiar</button></noscript>
-                                </form>
-                            @endif
-                        </td>
-                        <td>
-                            <span class="badge badge-{{ $cuenta->estado }}">{{ $cuenta->estado }}</span>
-                        </td>
-                        <td>
-                            @if (! $esYo)
-                                @if (auth()->user()->puedeActivarCuentas())
-                                    <form class="inline" method="POST" action="{{ route('admin.users.toggle-status', $cuenta->id_cuenta) }}">
-                                        @csrf @method('PUT')
-                                        <button type="submit">{{ $cuenta->estado === 'activo' ? 'Desactivar' : 'Activar' }}</button>
-                                    </form>
-                                @endif
-                                @if (auth()->user()->puedeEliminarUsuarios())
-                                    <form class="inline" method="POST" action="{{ route('admin.users.destroy', $cuenta->id_cuenta) }}"
-                                          onsubmit="return confirm('¿Eliminar este usuario?');">
-                                        @csrf @method('DELETE')
-                                        <button type="submit" style="color:#b91c1c;">Eliminar</button>
-                                    </form>
-                                @endif
-                            @else
-                                <em>(tú)</em>
-                            @endif
-
-                            @if (auth()->user()->puedeEditarUsuarios() && ! $esYo)
-                                <details>
-                                    <summary>Editar datos</summary>
-                                    <form method="POST" action="{{ route('admin.users.update', $cuenta->id_cuenta) }}"
-                                          style="display:grid; gap:0.3rem; margin-top:0.5rem; max-width:300px;">
-                                        @csrf @method('PUT')
-                                        <input type="text" name="nombre" value="{{ $cuenta->usuario->nombre }}" required>
-                                        <input type="text" name="puesto" value="{{ $cuenta->usuario->puesto }}" placeholder="Puesto">
-                                        <input type="email" name="email" value="{{ $cuenta->usuario->email }}" placeholder="Email">
-                                        <input type="password" name="password" placeholder="Nueva contraseña (opcional)">
-                                        <button type="submit">Guardar</button>
-                                    </form>
-                                </details>
-                            @endif
-
-                            @if (auth()->user()->puedeGestionarPermisos())
-                                <details>
-                                    <summary>Permisos del rol «{{ $cuenta->rol->nombre }}»</summary>
-                                    <form method="POST" action="{{ route('admin.users.update-permissions', $cuenta->id_cuenta) }}">
-                                        @csrf @method('PUT')
-                                        <div class="perm-list">
-                                            @php $actuales = $cuenta->permisosArray(); @endphp
-                                            @foreach ($permisos as $permiso)
-                                                <label>
-                                                    <input type="checkbox" name="permisos[]" value="{{ $permiso->id_permiso }}"
-                                                           @checked(in_array($permiso->id_permiso, $actuales, true))>
-                                                    {{ $permiso->nombre }}
-                                                    <span style="color:#6b7280;">— {{ $permiso->descripcion }}</span>
-                                                </label>
-                                            @endforeach
-                                        </div>
-                                        <button type="submit">Guardar permisos</button>
-                                        <p style="font-size:0.75rem;color:#6b7280;margin:0.3rem 0 0;">
-                                            Aplica a <strong>todas</strong> las cuentas con el rol «{{ $cuenta->rol->nombre }}».
-                                        </p>
-                                    </form>
-                                </details>
-                            @endif
-                        </td>
+    <div class="overflow-hidden rounded-card border border-borde bg-superficie shadow-soft">
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="titulo bg-jade text-left text-[11px] text-white">
+                        <th class="px-4 py-3">ID</th>
+                        <th class="px-4 py-3">Nombre</th>
+                        <th class="px-4 py-3">Username</th>
+                        <th class="px-4 py-3">Rol</th>
+                        <th class="px-4 py-3">Estado</th>
+                        <th class="px-4 py-3">Acciones</th>
                     </tr>
-                @endforeach
-            </tbody>
-        </table>
-    </main>
-</body>
-</html>
+                </thead>
+                <tbody>
+                    @foreach ($cuentas as $cuenta)
+                        @php $esYo = $cuenta->id_cuenta === auth()->user()->id_cuenta; @endphp
+                        <tr class="border-b border-borde align-top transition-colors last:border-0 hover:bg-jade/4">
+                            <td class="px-4 py-3 text-texto-suave">{{ $cuenta->id_cuenta }}</td>
+                            <td class="px-4 py-3">
+                                <p class="font-medium">{{ $cuenta->usuario->nombre }}</p>
+                                @if ($cuenta->usuario->puesto)
+                                    <p class="text-xs text-texto-suave">{{ $cuenta->usuario->puesto }}</p>
+                                @endif
+                            </td>
+                            <td class="px-4 py-3 text-texto-suave">{{ $cuenta->username }}</td>
+                            <td class="px-4 py-3">
+                                @if (! $esYo && auth()->user()->puedeCambiarRoles())
+                                    <form method="POST" action="{{ route('admin.users.update-role', $cuenta->id_cuenta) }}">
+                                        @csrf @method('PUT')
+                                        <select name="id_rol" onchange="this.form.submit()"
+                                                class="input px-2 py-1 text-xs">
+                                            @foreach ($roles as $rol)
+                                                <option value="{{ $rol->id_rol }}" @selected($rol->id_rol === $cuenta->id_rol)>{{ $rol->nombre }}</option>
+                                            @endforeach
+                                        </select>
+                                        <noscript><button type="submit" class="btn-outline btn-sm mt-1">Cambiar</button></noscript>
+                                    </form>
+                                @else
+                                    {{ $cuenta->rol->nombre }}
+                                @endif
+                            </td>
+                            <td class="px-4 py-3">
+                                <span class="badge-{{ $cuenta->estado }}">{{ $cuenta->estado }}</span>
+                            </td>
+                            <td class="px-4 py-3">
+                                @if ($esYo)
+                                    <span class="text-xs text-texto-suave italic">(tu cuenta)</span>
+                                @else
+                                    <div class="flex flex-wrap gap-2">
+                                        @if (auth()->user()->puedeActivarCuentas())
+                                            <form method="POST" action="{{ route('admin.users.toggle-status', $cuenta->id_cuenta) }}">
+                                                @csrf @method('PUT')
+                                                <button type="submit" class="btn-outline btn-sm">
+                                                    {{ $cuenta->estado === 'activo' ? 'Desactivar' : 'Activar' }}
+                                                </button>
+                                            </form>
+                                        @endif
+                                        @if (auth()->user()->puedeEliminarUsuarios())
+                                            <form method="POST" action="{{ route('admin.users.destroy', $cuenta->id_cuenta) }}"
+                                                  onsubmit="return confirm('¿Eliminar a {{ $cuenta->usuario->nombre }}? La cuenta se conserva en la bitácora, pero no podrá volver a entrar.');">
+                                                @csrf @method('DELETE')
+                                                <button type="submit" class="btn-danger btn-sm">Eliminar</button>
+                                            </form>
+                                        @endif
+                                    </div>
+                                @endif
+
+                                @if (auth()->user()->puedeEditarUsuarios() && ! $esYo)
+                                    <details class="mt-2">
+                                        <summary class="cursor-pointer text-xs text-jade">Editar datos</summary>
+                                        <form method="POST" action="{{ route('admin.users.update', $cuenta->id_cuenta) }}"
+                                              class="mt-2 grid max-w-xs gap-2">
+                                            @csrf @method('PUT')
+                                            <input type="text" name="nombre" class="input py-1.5 text-xs"
+                                                   value="{{ $cuenta->usuario->nombre }}" required>
+                                            <input type="text" name="puesto" class="input py-1.5 text-xs"
+                                                   value="{{ $cuenta->usuario->puesto }}" placeholder="Puesto">
+                                            <input type="email" name="email" class="input py-1.5 text-xs"
+                                                   value="{{ $cuenta->usuario->email }}" placeholder="Correo">
+                                            <input type="password" name="password" class="input py-1.5 text-xs"
+                                                   placeholder="Nueva contraseña (opcional)" autocomplete="new-password">
+                                            <button type="submit" class="btn-primary btn-sm">Guardar</button>
+                                        </form>
+                                    </details>
+                                @endif
+
+                                @if (auth()->user()->puedeGestionarPermisos())
+                                    <details class="mt-2">
+                                        <summary class="cursor-pointer text-xs text-jade">
+                                            Permisos del rol «{{ $cuenta->rol->nombre }}»
+                                        </summary>
+                                        <form method="POST" action="{{ route('admin.users.update-permissions', $cuenta->id_cuenta) }}"
+                                              class="mt-2">
+                                            @csrf @method('PUT')
+                                            @php $actuales = $cuenta->permisosArray(); @endphp
+                                            <div class="grid gap-1">
+                                                @foreach ($permisos as $permiso)
+                                                    <label class="flex items-start gap-2 text-xs">
+                                                        <input type="checkbox" name="permisos[]" value="{{ $permiso->id_permiso }}"
+                                                               class="mt-0.5 accent-jade"
+                                                               @checked(in_array($permiso->id_permiso, $actuales, true))>
+                                                        <span>
+                                                            <span class="font-medium">{{ $permiso->nombre }}</span>
+                                                            <span class="text-texto-suave">— {{ $permiso->descripcion }}</span>
+                                                        </span>
+                                                    </label>
+                                                @endforeach
+                                            </div>
+                                            <button type="submit" class="btn-primary btn-sm mt-3">Guardar permisos</button>
+                                            <p class="mt-2 text-[11px] text-texto-suave">
+                                                Aplica a <strong>todas</strong> las cuentas con el rol «{{ $cuenta->rol->nombre }}».
+                                            </p>
+                                        </form>
+                                    </details>
+                                @endif
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+@endsection

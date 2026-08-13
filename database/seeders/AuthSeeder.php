@@ -16,14 +16,17 @@ class AuthSeeder extends Seeder
 
     public function run(): void
     {
-        // === Roles ===
+        // === Roles internos ===
+        // Solo hay dos roles en esta tabla. El visitante NO es un rol: vive en
+        // la tabla `clientes` con su propio guard (`cliente`), para que nunca
+        // pueda alcanzar /admin/*.
+        //
         // El id_rol = 1 DEBE ser Administrador: el Super Admin se identifica
         // por id_usuario = 1 y las protecciones del AdminController comparan
         // contra id_rol === 1.
         DB::table('roles')->insert([
             ['id_rol' => 1, 'nombre' => 'Administrador', 'created_at' => now(), 'updated_at' => now()],
             ['id_rol' => 2, 'nombre' => 'Taquilla',      'created_at' => now(), 'updated_at' => now()],
-            ['id_rol' => 3, 'nombre' => 'Visitante',     'created_at' => now(), 'updated_at' => now()],
         ]);
 
         // === Permisos base ===
@@ -38,8 +41,9 @@ class AuthSeeder extends Seeder
         ]);
 
         // === Asignación: Administrador recibe los 7 ===
-        // Taquilla y Visitante arrancan sin permisos: se les asignan después
-        // desde el panel admin (permiso gestion_permisos).
+        // Taquilla no recibe ninguno de estos: la administración de cuentas es
+        // exclusiva de Administrador. Sus permisos operativos los siembra
+        // PermisosTaquillaSeeder.
         foreach (range(1, 7) as $idPermiso) {
             DB::table('rol_permiso')->insert([
                 'id_rol'     => 1,
@@ -48,13 +52,15 @@ class AuthSeeder extends Seeder
         }
 
         // === Super Admin (id_usuario = 1) ===
+        // El segundo argumento es obligatorio: la PK no se llama `id`.
+        // Sin él, Postgres recibe `returning "id"` y truena.
         $usuarioId = DB::table('usuarios')->insertGetId([
             'nombre'     => 'Super Admin',
             'puesto'     => 'Administrador del sistema',
             'email'      => 'admin@example.com',
             'created_at' => now(),
             'updated_at' => now(),
-        ]);
+        ], 'id_usuario');
 
         DB::table('cuentas')->insert([
             'username'   => 'admin',
@@ -65,5 +71,39 @@ class AuthSeeder extends Seeder
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+
+        $this->resincronizarSecuencias();
+    }
+
+    /**
+     * PostgreSQL no avanza la secuencia cuando el INSERT trae el id explícito
+     * (a diferencia de MySQL, que sí mueve el AUTO_INCREMENT). Sin esto, el
+     * siguiente insert sin id intenta reusar el 1 y viola la PK.
+     *
+     * No-op en cualquier otro driver.
+     */
+    private function resincronizarSecuencias(): void
+    {
+        if (DB::connection()->getDriverName() !== 'pgsql') {
+            return;
+        }
+
+        $tablas = [
+            'roles'    => 'id_rol',
+            'permisos' => 'id_permiso',
+            'usuarios' => 'id_usuario',
+            'cuentas'  => 'id_cuenta',
+        ];
+
+        foreach ($tablas as $tabla => $pk) {
+            DB::statement(
+                "SELECT setval(
+                    pg_get_serial_sequence(?, ?),
+                    COALESCE((SELECT MAX({$pk}) FROM {$tabla}), 0) + 1,
+                    false
+                )",
+                [$tabla, $pk]
+            );
+        }
     }
 }

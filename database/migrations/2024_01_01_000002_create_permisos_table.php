@@ -11,7 +11,7 @@ return new class extends Migration {
             $table->bigIncrements('id_permiso');
             $table->string('nombre', 80)->unique();
             $table->string('descripcion', 255)->nullable();
-            $table->timestamps();
+            $table->timestampsTz();
         });
     }
 

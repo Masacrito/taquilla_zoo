@@ -15,7 +15,8 @@ return new class extends Migration {
             $table->unsignedBigInteger('id_usuario');
             $table->unsignedBigInteger('id_rol');
             $table->rememberToken();
-            $table->timestamps();
+            $table->timestampsTz();
+            $table->softDeletesTz();   // brief §4.6: nada se borra
 
             $table->foreign('id_usuario')
                   ->references('id_usuario')->on('usuarios')

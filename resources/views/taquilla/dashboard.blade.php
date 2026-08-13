@@ -1,32 +1,29 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel Taquilla</title>
-</head>
-<body style="font-family:system-ui,sans-serif; margin:0;">
-    <header style="padding:1rem 2rem; background:#1e3a8a; color:#fff; display:flex; justify-content:space-between; align-items:center;">
-        <strong>Panel Taquilla</strong>
-        <form method="POST" action="{{ route('logout') }}" style="margin:0;">
-            @csrf
-            <button type="submit" style="background:none;border:0;color:#fff;cursor:pointer;">Cerrar sesión</button>
-        </form>
-    </header>
+@extends('layouts.interno')
 
-    <main style="padding:2rem;">
-        <h1>Bienvenido, {{ auth()->user()->usuario->nombre }}</h1>
-        <p style="color:#6b7280;">Rol: {{ auth()->user()->rol->nombre }}</p>
+@section('titulo', 'Panel taquilla')
+@section('subtitulo', 'Bienvenido, ' . auth()->user()->usuario->nombre)
 
-        @if (session('error'))
-            <p style="color:red;">{{ session('error') }}</p>
-        @endif
+@section('contenido')
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div class="card">
+            <p class="titulo text-sm text-jade">Accesos</p>
+            <p class="mt-2 text-sm text-texto-suave">
+                Escaneo de códigos QR y bitácora de entradas.
+            </p>
+            <span class="badge-especial mt-3">Próximamente</span>
+        </div>
 
-        <p>Esta es tu pantalla principal de taquilla.</p>
+        <div class="card">
+            <p class="titulo text-sm text-jade">Cortes</p>
+            <p class="mt-2 text-sm text-texto-suave">
+                Corte de ingresos del día.
+            </p>
+            <span class="badge-especial mt-3">Próximamente</span>
+        </div>
+    </div>
 
-        @if (auth()->user()->puedeGestionarUsuarios())
-            <p><a href="{{ route('admin.users.index') }}">→ Gestionar usuarios</a></p>
-        @endif
-    </main>
-</body>
-</html>
+    <div class="card mt-6">
+        <p class="titulo text-xs text-texto-suave">Horario de operación</p>
+        <p class="mt-2 text-sm">Martes a domingo, 8:30 a 16:00 hrs. <strong>Lunes cerrado.</strong></p>
+    </div>
+@endsection

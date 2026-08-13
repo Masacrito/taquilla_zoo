@@ -3,23 +3,51 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Support\Facades\Route;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
+        then: function () {
+            // Webhooks de pago: sin sesión y sin CSRF, autenticados por firma
+            // HMAC (brief §7). Van fuera del grupo `web` a propósito.
+            Route::middleware('api')
+                ->group(base_path('routes/webhooks.php'));
+        },
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'rol'            => \App\Http\Middleware\EnsureRole::class,
-            'permission'     => \App\Http\Middleware\EnsurePermission::class,
-            'account.status' => \App\Http\Middleware\CheckAccountStatus::class,
+            'rol'             => \App\Http\Middleware\EnsureRole::class,
+            'permission'      => \App\Http\Middleware\EnsurePermission::class,
+            'account.status'  => \App\Http\Middleware\CheckAccountStatus::class,
+            'guard.exclusivo' => \App\Http\Middleware\EnsureGuardExclusivo::class,
         ]);
 
-        // Cierra la sesión en caliente si la cuenta se desactiva mientras navega.
-        $middleware->web(append: [
-            \App\Http\Middleware\CheckAccountStatus::class,
+        // `account.status` NO va en el grupo `web` global: eso lo aplicaría
+        // también al portal público del visitante, que el brief §3.2 excluye
+        // expresamente. Se aplica por ruta, sobre los grupos internos.
+
+        // El aislamiento de guards tiene que evaluarse ANTES que `auth`.
+        // Laravel reordena los middleware según su lista de prioridad, así que
+        // el orden declarado en la ruta NO basta: `auth` se adelantaría y una
+        // cuenta interna que toca el portal recibiría un redirect al login en
+        // vez del 403 que exige el brief §10.6.
+        //
+        // La referencia es el CONTRATO AuthenticatesRequests, no la clase
+        // Authenticate: es lo que aparece en la lista de prioridad. Pasar la
+        // clase concreta no falla, pero deja este middleware al final de la
+        // lista, que es exactamente lo contrario de lo que se busca.
+        $middleware->prependToPriorityList(
+            before: \Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests::class,
+            prepend: \App\Http\Middleware\EnsureGuardExclusivo::class,
+        );
+
+        // El banco no manda token CSRF. La autenticidad del webhook la da la
+        // firma HMAC que verifica la pasarela, no la sesión.
+        $middleware->validateCsrfTokens(except: [
+            'webhooks/*',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

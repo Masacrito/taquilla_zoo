@@ -1,33 +1,22 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel Administrador</title>
-</head>
-<body style="font-family:system-ui,sans-serif; margin:0;">
-    <header style="padding:1rem 2rem; background:#1e3a8a; color:#fff; display:flex; justify-content:space-between; align-items:center;">
-        <strong>Panel Administrador</strong>
-        <form method="POST" action="{{ route('logout') }}" style="margin:0;">
-            @csrf
-            <button type="submit" style="background:none;border:0;color:#fff;cursor:pointer;">Cerrar sesión</button>
-        </form>
-    </header>
+@extends('layouts.interno')
 
-    <main style="padding:2rem;">
-        <h1>Bienvenido, {{ auth()->user()->usuario->nombre }}</h1>
-        <p style="color:#6b7280;">Rol: {{ auth()->user()->rol->nombre }}</p>
+@section('titulo', 'Panel administrador')
+@section('subtitulo', 'Bienvenido, ' . auth()->user()->usuario->nombre)
 
-        @if (session('success'))
-            <p style="color:green;">{{ session('success') }}</p>
-        @endif
-        @if (session('error'))
-            <p style="color:red;">{{ session('error') }}</p>
-        @endif
-
+@section('contenido')
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         @if (auth()->user()->puedeGestionarUsuarios())
-            <p><a href="{{ route('admin.users.index') }}">→ Gestionar usuarios</a></p>
+            <a href="{{ route('admin.users.index') }}" class="card transition-shadow hover:shadow-card">
+                <p class="titulo text-sm text-jade">Usuarios</p>
+                <p class="mt-2 text-sm text-texto-suave">
+                    Altas, roles, permisos y estado de las cuentas internas.
+                </p>
+            </a>
         @endif
-    </main>
-</body>
-</html>
+    </div>
+
+    <p class="mt-8 text-xs text-texto-suave">
+        Los módulos de rubros, catálogos, aforo, cortes y estadísticas se habilitan en la
+        siguiente fase.
+    </p>
+@endsection

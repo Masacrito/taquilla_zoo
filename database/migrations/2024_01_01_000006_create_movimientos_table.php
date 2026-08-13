@@ -14,7 +14,7 @@ return new class extends Migration {
             $table->string('accion', 20);
             $table->string('registro_id', 60)->nullable();
             $table->json('detalles')->nullable();
-            $table->timestamp('fecha')->useCurrent();
+            $table->timestampTz('fecha')->useCurrent();
 
             $table->foreign('id_cuenta')
                   ->references('id_cuenta')->on('cuentas')
