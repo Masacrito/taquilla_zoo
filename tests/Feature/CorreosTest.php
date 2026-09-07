@@ -193,7 +193,11 @@ class CorreosTest extends TestCase
         $mailable->assertHasSubject("Tu comprobante ZooMAT — {$compra->folio}");
         $mailable->assertSeeInHtml($compra->folio);
         $mailable->assertSeeInHtml('Lunes cerrado');
-        $mailable->assertSeeInHtml('<svg', false);   // el QR va incrustado en el correo
+
+        // El QR NO puede ir como SVG: Gmail lo elimina y el visitante
+        // recibiría el correo sin su código.
+        $mailable->assertDontSeeInHtml('<svg', false);
+        $mailable->assertSeeInHtml('<img', false);
 
         // attachments() ya construye el PDF con Pdf::loadView; si la vista o
         // el QR fallaran, reventaría aquí.
@@ -201,6 +205,36 @@ class CorreosTest extends TestCase
         $this->assertCount(1, $adjuntos);
         $this->assertSame("comprobante-{$compra->folio}.pdf", $adjuntos[0]->as);
         $this->assertSame('application/pdf', $adjuntos[0]->mime);
+    }
+
+    /**
+     * Inspecciona el mensaje MIME que de verdad sale, no la previsualización.
+     *
+     * Al renderizar en aislamiento, Laravel convierte las imágenes incrustadas
+     * a data URI para que la vista previa se vea bien; solo al enviar se
+     * generan las partes `cid:` reales. Esta prueba mira el envío.
+     */
+    public function test_el_correo_enviado_lleva_el_qr_como_imagen_incrustada(): void
+    {
+        // Sin Mail::fake, y con la cola en modo síncrono, confirmar el pago
+        // envía el comprobante de verdad: se inspecciona ese, no uno armado
+        // a mano para la prueba.
+        $compra = $this->comprarYPagar();
+
+        $mensajes = app('mailer')->getSymfonyTransport()->messages();
+        $this->assertCount(1, $mensajes, 'La confirmación de pago debe enviar exactamente un comprobante.');
+
+        $enviado = $mensajes[0]->getOriginalMessage();
+        $this->assertStringContainsString($compra->folio, $enviado->getSubject());
+        $tipos   = collect($enviado->getAttachments())
+            ->map(fn ($parte) => $parte->getMediaType() . '/' . $parte->getMediaSubtype())
+            ->all();
+
+        // Un PNG (el QR, en línea) y un PDF (el comprobante adjunto).
+        $this->assertContains('image/png', $tipos, 'Falta el QR incrustado.');
+        $this->assertContains('application/pdf', $tipos, 'Falta el PDF adjunto.');
+
+        $this->assertStringContainsString('cid:', $enviado->getHtmlBody());
     }
 
     /**

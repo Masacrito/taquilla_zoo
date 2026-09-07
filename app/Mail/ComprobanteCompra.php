@@ -44,7 +44,9 @@ class ComprobanteCompra extends Mailable implements ShouldQueue
             markdown: 'emails.comprobante',
             with: [
                 'compra' => $this->compra->loadMissing('detalle'),
-                'qrSvg'  => app(QrImagenService::class)->svg($this->compra, 220),
+                // PNG en binario: la vista lo incrusta con $message->embedData()
+                // como adjunto en línea. SVG no sirve aquí — Gmail lo elimina.
+                'qrPng'  => app(QrImagenService::class)->pngBinario($this->compra, 300),
             ],
         );
     }

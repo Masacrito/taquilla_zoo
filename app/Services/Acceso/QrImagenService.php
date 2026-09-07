@@ -42,11 +42,30 @@ class QrImagenService
      */
     public function pngDataUri(Compra $compra, int $tamano = 400): string
     {
+        return $this->constructorPng($compra, $tamano)->getDataUri();
+    }
+
+    /**
+     * PNG en binario, para incrustarlo en el correo como adjunto en línea
+     * (CID).
+     *
+     * En el correo NO se puede usar SVG: Gmail y la mayoría de los clientes
+     * lo eliminan por seguridad, y el visitante recibe el mensaje sin su
+     * código. Tampoco sirve un data URI, que Gmail también bloquea. La única
+     * vía confiable es un PNG adjunto y referenciado con cid:.
+     */
+    public function pngBinario(Compra $compra, int $tamano = 400): string
+    {
+        return $this->constructorPng($compra, $tamano)->getString();
+    }
+
+    private function constructorPng(Compra $compra, int $tamano): \Endroid\QrCode\Writer\Result\ResultInterface
+    {
         if (blank($compra->qr_token)) {
             throw new \RuntimeException("La compra {$compra->folio} no tiene QR emitido.");
         }
 
-        $resultado = (new Builder(
+        return (new Builder(
             writer: new PngWriter(),
             data: $compra->qr_token,
             errorCorrectionLevel: ErrorCorrectionLevel::High,
@@ -55,8 +74,6 @@ class QrImagenService
             foregroundColor: new Color(0, 82, 74),
             backgroundColor: new Color(255, 255, 255),
         ))->build();
-
-        return $resultado->getDataUri();
     }
 
     public function svgDeTexto(string $contenido, int $tamano = 320): string

@@ -14,7 +14,11 @@ Presenta este código en el acceso del zoológico. También lo encuentras en el
 PDF adjunto y en tu cuenta.
 
 <div style="text-align:center; margin:24px 0;">
-{!! $qrSvg !!}
+<img src="{{ $message->embedData($qrPng, 'codigo-' . $compra->folio . '.png', 'image/png') }}"
+     alt="Código QR {{ $compra->folio }}"
+     width="260" height="260"
+     style="display:block; margin:0 auto; border:1px solid #e5e7eb; border-radius:10px;">
+<p style="margin:10px 0 0; font-size:13px; color:#6b7280;">{{ $compra->folio }}</p>
 </div>
 
 <x-mail::table>
