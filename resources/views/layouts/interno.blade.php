@@ -35,6 +35,10 @@
                     ['ruta' => 'admin.aforo.index',     'patron' => 'admin.aforo.*',     'texto' => 'Aforo',     'permisos' => ['gestion_aforo']],
                     ['ruta' => 'admin.compras.index',   'patron' => 'admin.compras.*',   'texto' => 'Compras',   'permisos' => ['gestion_clientes']],
                     ['ruta' => 'admin.clientes.index',  'patron' => 'admin.clientes.*',  'texto' => 'Visitantes','permisos' => ['gestion_clientes']],
+                    ['ruta' => 'admin.cortes',          'patron' => 'admin.cortes',      'texto' => 'Cortes',    'permisos' => ['generar_cortes']],
+                    ['ruta' => 'admin.estadisticas',    'patron' => 'admin.estadisticas','texto' => 'Estadísticas','permisos' => ['ver_estadisticas']],
+                    ['ruta' => 'accesos.escanear',      'patron' => 'accesos.escanear',  'texto' => 'Acceso',    'permisos' => ['validar_accesos']],
+                    ['ruta' => 'accesos.bitacora',      'patron' => 'accesos.bitacora',  'texto' => 'Entradas',  'permisos' => ['ver_bitacora_accesos']],
                     ['ruta' => 'admin.bitacora.index',  'patron' => 'admin.bitacora.*',  'texto' => 'Bitácora',  'permisos' => ['ver_bitacora_auditoria']],
                 ];
             @endphp

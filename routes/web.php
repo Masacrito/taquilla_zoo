@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AccesoController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AforoController;
 use App\Http\Controllers\AuthController;
@@ -12,6 +13,7 @@ use App\Http\Controllers\CompraController;
 use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\PagoSimuladoController;
 use App\Http\Controllers\PortalController;
+use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\RubroController;
 use App\Http\Controllers\TaquillaController;
 use Illuminate\Support\Facades\Route;
@@ -204,8 +206,44 @@ Route::prefix('admin')->name('admin.')->middleware(['guard.exclusivo:web', 'auth
         ->middleware('permission:cancelar_compras')
         ->name('compras.cancelar');
 
+    // === REPORTES ===
+    // `generar_cortes` lo tiene también Taquilla (brief §3.3), por eso la
+    // protección es por permiso y no por rol.
+    Route::get('/cortes', [ReporteController::class, 'cortes'])
+        ->middleware('permission:generar_cortes')
+        ->name('cortes');
+
+    Route::get('/estadisticas', [ReporteController::class, 'estadisticas'])
+        ->middleware('permission:ver_estadisticas')
+        ->name('estadisticas');
+
     // === BITÁCORA DE AUDITORÍA ===
+    // (los accesos van fuera de este grupo: también los usa Taquilla)
     Route::get('/bitacora', [BitacoraController::class, 'index'])
         ->middleware('permission:ver_bitacora_auditoria')
         ->name('bitacora.index');
 });
+
+// === MÓDULO DE ACCESOS (torniquetes) ===
+// Fuera del prefijo /admin porque Taquilla también lo usa: sus permisos
+// `validar_accesos` y `ver_bitacora_accesos` los tiene ese rol (brief §3.3).
+Route::prefix('accesos')->name('accesos.')
+    ->middleware(['auth', 'guard.exclusivo:web', 'account.status'])
+    ->group(function () {
+        Route::get('/escanear', [AccesoController::class, 'escanear'])
+            ->middleware('permission:validar_accesos')
+            ->name('escanear');
+
+        // Dos pasos: consultar no consume nada, validar sí descuenta.
+        Route::post('/consultar', [AccesoController::class, 'consultar'])
+            ->middleware('permission:validar_accesos')
+            ->name('consultar');
+
+        Route::post('/validar', [AccesoController::class, 'validar'])
+            ->middleware('permission:validar_accesos')
+            ->name('validar');
+
+        Route::get('/bitacora', [AccesoController::class, 'bitacora'])
+            ->middleware('permission:ver_bitacora_accesos')
+            ->name('bitacora');
+    });
