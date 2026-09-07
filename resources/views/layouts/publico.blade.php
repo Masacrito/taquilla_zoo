@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('titulo') — ZooMAT</title>
+
+    {{-- Marca el documento antes de que se aplique la hoja de estilos. El CSS
+         solo esconde los bloques que aparecen al hacer scroll si esta marca
+         existe; sin JS la portada se ve completa y quieta, no en blanco. --}}
+    <script>document.documentElement.dataset.js = '';</script>
+
     @vite('resources/css/app.css')
 </head>
 <body class="min-h-screen">
@@ -33,6 +39,10 @@
             </nav>
         </div>
     </header>
+
+    {{-- Secciones a todo lo ancho, fuera del contenedor de 5xl. La portada
+         la usa para su encabezado y el bloque de los jaguares. --}}
+    @yield('ancho_completo')
 
     <main class="mx-auto max-w-5xl px-4 py-8">
         @if (session('success'))

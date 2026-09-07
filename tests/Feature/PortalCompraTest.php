@@ -87,6 +87,35 @@ class PortalCompraTest extends TestCase
             ->assertSee('Lunes cerrado');
     }
 
+    public function test_la_portada_arma_la_seccion_de_los_jaguares_y_los_habitats(): void
+    {
+        $respuesta = $this->get('/')->assertOk();
+
+        // Las dos fotos, cada una con su <picture> y su respaldo JPEG.
+        $respuesta->assertSee('jaguar-moteado.webp', false);
+        $respuesta->assertSee('jaguar-negro.webp', false);
+        $respuesta->assertSee('jaguar-negro.jpg', false);
+        $respuesta->assertSee('Son el mismo animal');
+
+        // Los seis hábitats y sus grecas. El `id` del patrón lleva índice: si
+        // se repitiera, las seis tarjetas pintarían el patrón de la primera.
+        $respuesta->assertSee('Museo del Cocodrilo');
+        $respuesta->assertSee('Senderos en selva');
+        $respuesta->assertSee('greca-0', false);
+        $respuesta->assertSee('greca-5', false);
+    }
+
+    public function test_la_portada_no_esconde_contenido_si_falla_el_javascript(): void
+    {
+        // La regla que oculta los bloques que aparecen al hacer scroll cuelga
+        // de `html[data-js]`, y esa marca la pone un script. Si algún día se
+        // quita el script sin quitar el CSS, media portada queda invisible.
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('document.documentElement.dataset.js', false)
+            ->assertSee('data-revelar', false);
+    }
+
     // ═══ Registro y verificación ═══
 
     public function test_el_registro_emite_un_codigo_y_deja_el_correo_sin_verificar(): void

@@ -124,6 +124,40 @@
 @utility badge-inactivo { @apply badge bg-cinabrio-suave text-cinabrio; }
 @utility badge-especial { @apply badge bg-magenta-suave text-magenta; }
 
+/* === Aparición al hacer scroll === */
+
+/*
+ * Los elementos con `data-revelar` entran al viewport desplazándose. La
+ * dirección la marca el valor: los dos jaguares de la portada entran uno por
+ * cada lado.
+ *
+ * OJO con el `html[data-js]`: sin él, un fallo de JS dejaría media portada
+ * invisible para siempre. La regla que esconde solo aplica cuando el script
+ * alcanzó a marcar el documento, así que sin JS todo se ve, quieto.
+ */
+html[data-js] [data-revelar] {
+    opacity: 0;
+    transition: opacity 700ms ease-out, transform 700ms ease-out;
+}
+html[data-js] [data-revelar='izquierda'] { transform: translateX(-2.5rem); }
+html[data-js] [data-revelar='derecha']   { transform: translateX(2.5rem); }
+html[data-js] [data-revelar='abajo']     { transform: translateY(1.75rem); }
+
+html[data-js] [data-revelar][data-visible] {
+    opacity: 1;
+    transform: none;
+}
+
+/* Quien pidió menos movimiento ve el contenido sin desplazamiento. */
+@media (prefers-reduced-motion: reduce) {
+    html[data-js] [data-revelar],
+    html[data-js] [data-revelar][data-visible] {
+        opacity: 1;
+        transform: none;
+        transition: none;
+    }
+}
+
 /* === Avisos === */
 @utility flash {
     @apply mb-4 rounded-input px-4 py-3 text-sm;
