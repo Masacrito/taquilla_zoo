@@ -2,7 +2,7 @@
 
 namespace App\Services\Venta;
 
-use App\Exceptions\AforoAgotadoException;
+use App\Exceptions\DiaNoDisponibleException;
 use App\Models\AforoDiario;
 use App\Models\Cliente;
 use App\Models\Compra;
@@ -15,12 +15,13 @@ use Illuminate\Support\Facades\DB;
  *
  * Todo ocurre dentro de UNA transacción:
  *   1. Folio consecutivo, tomando el contador con bloqueo de fila.
- *   2. Reserva atómica de aforo (UPDATE condicional, nunca SELECT+UPDATE).
- *   3. Cabecera de la compra en estado `pendiente_pago`.
- *   4. Detalle con el precio y el nombre del rubro CONGELADOS.
+ *   2. Cabecera de la compra en estado `pendiente_pago`.
+ *   3. Detalle con el precio y el nombre del rubro CONGELADOS.
  *
- * Si algo falla, se revierte todo: no quedan folios huérfanos ni aforo
- * reservado sin compra.
+ * Si algo falla, se revierte todo y no quedan folios huérfanos.
+ *
+ * No se reserva cupo: no hay aforo máximo. Lo único que se valida de la fecha
+ * es que el día exista en el calendario y esté abierto.
  */
 class RegistrarCompraService
 {
@@ -34,16 +35,13 @@ class RegistrarCompraService
     ): Compra {
         return DB::transaction(function () use ($cliente, $cotizacion, $fechaVisita, $observaciones) {
 
-            // El día tiene que existir y estar abierto antes de intentar nada.
+            // Lo único que se valida de la fecha es que el día exista en el
+            // calendario y no esté cerrado. Sin cupo que revisar no hay nada
+            // que reservar, ni carrera que se pueda perder.
             $dia = AforoDiario::where('fecha', $fechaVisita)->first();
 
             if (! $dia || $dia->cerrado) {
-                throw AforoAgotadoException::diaNoDisponible($fechaVisita);
-            }
-
-            // Reserva atómica. Si devuelve false, otro comprador se adelantó.
-            if (! AforoDiario::reservar($fechaVisita, $cotizacion->pasesTotal)) {
-                throw AforoAgotadoException::paraFecha($fechaVisita);
+                throw DiaNoDisponibleException::paraFecha($fechaVisita);
             }
 
             $compra = Compra::create([

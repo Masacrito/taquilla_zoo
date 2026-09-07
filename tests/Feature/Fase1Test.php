@@ -123,16 +123,15 @@ class Fase1Test extends TestCase
         $this->assertSame(1, Rubro::vigentes(now()->subDays(5)->toDateString())->count());
     }
 
-    // ═══ Aforo: lunes cerrados y descuento atómico ═══
+    // ═══ Calendario de operación: lunes cerrados ═══
 
     public function test_los_lunes_se_generan_cerrados(): void
     {
         $lunes = Carbon::parse('next monday')->startOfDay();
 
         $this->actingAs($this->admin(), 'web')->post('/admin/aforo/generar', [
-            'desde'       => $lunes->toDateString(),
-            'hasta'       => $lunes->copy()->addDays(6)->toDateString(),
-            'cupo_maximo' => 500,
+            'desde' => $lunes->toDateString(),
+            'hasta' => $lunes->copy()->addDays(6)->toDateString(),
         ])->assertRedirect();
 
         $this->assertTrue(AforoDiario::find($lunes->toDateString())->cerrado);
@@ -144,50 +143,61 @@ class Fase1Test extends TestCase
     {
         $martes = Carbon::parse('next tuesday')->toDateString();
 
-        AforoDiario::create(['fecha' => $martes, 'cupo_maximo' => 10, 'reservados' => 4]);
+        // Un martes cerrado a mano: generar no debe reabrirlo.
+        AforoDiario::create([
+            'fecha'         => $martes,
+            'cerrado'       => true,
+            'motivo_cierre' => 'Fumigación',
+        ]);
 
         $this->actingAs($this->admin(), 'web')->post('/admin/aforo/generar', [
-            'desde'       => $martes,
-            'hasta'       => $martes,
-            'cupo_maximo' => 900,
+            'desde' => $martes,
+            'hasta' => $martes,
         ]);
 
         $dia = AforoDiario::find($martes);
-        $this->assertSame(10, $dia->cupo_maximo);
-        $this->assertSame(4, $dia->reservados);
+        $this->assertTrue($dia->cerrado);
+        $this->assertSame('Fumigación', $dia->motivo_cierre);
     }
 
-    public function test_la_reserva_de_aforo_respeta_el_cupo(): void
+    public function test_la_pantalla_del_calendario_renderiza_los_dias(): void
     {
-        $fecha = Carbon::parse('next tuesday')->toDateString();
-        AforoDiario::create(['fecha' => $fecha, 'cupo_maximo' => 10, 'reservados' => 0]);
+        $martes = Carbon::parse('next tuesday')->toDateString();
+        $lunes  = Carbon::parse('next monday')->toDateString();
 
-        $this->assertTrue(AforoDiario::reservar($fecha, 8));
-        $this->assertFalse(AforoDiario::reservar($fecha, 5));   // solo quedan 2
-        $this->assertTrue(AforoDiario::reservar($fecha, 2));
-        $this->assertFalse(AforoDiario::reservar($fecha, 1));   // lleno
-
-        $this->assertSame(10, AforoDiario::find($fecha)->reservados);
-    }
-
-    public function test_un_dia_cerrado_no_acepta_reservas(): void
-    {
-        $fecha = Carbon::parse('next monday')->toDateString();
-        AforoDiario::create(['fecha' => $fecha, 'cupo_maximo' => 100, 'cerrado' => true]);
-
-        $this->assertFalse(AforoDiario::reservar($fecha, 1));
-    }
-
-    public function test_no_se_puede_bajar_el_cupo_por_debajo_de_lo_reservado(): void
-    {
-        $fecha = Carbon::parse('next tuesday')->toDateString();
-        AforoDiario::create(['fecha' => $fecha, 'cupo_maximo' => 100, 'reservados' => 40]);
+        AforoDiario::create(['fecha' => $martes]);
+        AforoDiario::create(['fecha' => $lunes, 'cerrado' => true, 'motivo_cierre' => 'Lunes: el zoológico no abre.']);
 
         $this->actingAs($this->admin(), 'web')
-            ->put("/admin/aforo/{$fecha}", ['cupo_maximo' => 20])
-            ->assertSessionHas('error');
+            ->get('/admin/aforo?desde=' . $lunes . '&hasta=' . Carbon::parse($lunes)->addWeek()->toDateString())
+            ->assertOk()
+            ->assertSee('Calendario de operación')
+            ->assertSee('abierto')
+            ->assertSee('cerrado')
+            ->assertSee('Lunes: el zoológico no abre.')
+            ->assertDontSee('Cupo');
+    }
 
-        $this->assertSame(100, AforoDiario::find($fecha)->cupo_maximo);
+    public function test_se_puede_cerrar_y_reabrir_un_dia(): void
+    {
+        $fecha = Carbon::parse('next tuesday')->toDateString();
+        AforoDiario::create(['fecha' => $fecha]);
+
+        $this->actingAs($this->admin(), 'web')
+            ->put("/admin/aforo/{$fecha}", ['cerrado' => 1, 'motivo_cierre' => 'Contingencia'])
+            ->assertSessionHas('success');
+
+        $dia = AforoDiario::find($fecha);
+        $this->assertTrue($dia->cerrado);
+        $this->assertSame('Contingencia', $dia->motivo_cierre);
+
+        $this->actingAs($this->admin(), 'web')
+            ->put("/admin/aforo/{$fecha}", [])
+            ->assertSessionHas('success');
+
+        $dia = AforoDiario::find($fecha);
+        $this->assertFalse($dia->cerrado);
+        $this->assertNull($dia->motivo_cierre, 'Al reabrir, el motivo del cierre debe limpiarse.');
     }
 
     // ═══ Permisos de las rutas nuevas ═══

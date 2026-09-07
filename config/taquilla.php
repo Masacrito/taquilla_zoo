@@ -4,18 +4,6 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Aforo
-    |--------------------------------------------------------------------------
-    |
-    | El cupo máximo diario todavía no lo define el área operativa (brief §12).
-    | Mientras tanto se usa este valor al generar días nuevos.
-    |
-    */
-
-    'aforo_cupo_maximo' => (int) env('AFORO_CUPO_MAXIMO', 2000),
-
-    /*
-    |--------------------------------------------------------------------------
     | Horario de operación
     |--------------------------------------------------------------------------
     |

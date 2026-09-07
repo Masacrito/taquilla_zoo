@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Exceptions\AforoAgotadoException;
+use App\Exceptions\DiaNoDisponibleException;
 use App\Jobs\ExpirarComprasPendientes;
 use App\Models\AforoDiario;
 use App\Models\Cliente;
@@ -54,8 +54,6 @@ class NucleoCompraTest extends TestCase
         $this->fechaVisita = Carbon::parse('next tuesday')->toDateString();
         AforoDiario::create([
             'fecha'       => $this->fechaVisita,
-            'cupo_maximo' => 100,
-            'reservados'  => 0,
         ]);
     }
 
@@ -121,35 +119,39 @@ class NucleoCompraTest extends TestCase
         $this->cotizar();
     }
 
-    // ═══ §10.2 — Concurrencia de aforo ═══
+    // ═══ La venta de un día abierto no tiene tope ═══
+    //
+    // Sustituye a la vieja prueba de concurrencia de aforo: el área operativa
+    // definió que no hay cupo máximo ni mínimo, así que lo que hay que
+    // garantizar es lo contrario de antes — que nada tope la venta.
 
-    public function test_compras_simultaneas_no_sobrevenden_el_cupo(): void
+    public function test_la_venta_de_un_dia_abierto_no_tiene_tope(): void
     {
-        AforoDiario::where('fecha', $this->fechaVisita)->update(['cupo_maximo' => 10, 'reservados' => 0]);
+        $vendidas = 0;
 
-        $exitosas = 0;
-        $fallidas = 0;
-
-        // 50 intentos de 1 pase contra 10 lugares.
+        // 50 compras de 40 pases cada una: 2000 personas para el mismo día.
         for ($i = 0; $i < 50; $i++) {
-            try {
-                $this->comprar(1, $this->cliente("comprador{$i}@example.com"));
-                $exitosas++;
-            } catch (AforoAgotadoException) {
-                $fallidas++;
-            }
+            $this->comprar(40, $this->cliente("comprador{$i}@example.com"));
+            $vendidas++;
         }
 
-        $this->assertSame(10, $exitosas, 'Debieron pasar exactamente 10 compras.');
-        $this->assertSame(40, $fallidas);
-        $this->assertSame(10, AforoDiario::find($this->fechaVisita)->reservados);
+        $this->assertSame(50, $vendidas, 'Ninguna compra debió rechazarse: no hay cupo.');
+        $this->assertSame(2000, (int) Compra::sum('pases_total'));
     }
 
     public function test_no_se_puede_comprar_para_un_dia_cerrado(): void
     {
         AforoDiario::where('fecha', $this->fechaVisita)->update(['cerrado' => true]);
 
-        $this->expectException(AforoAgotadoException::class);
+        $this->expectException(DiaNoDisponibleException::class);
+        $this->comprar();
+    }
+
+    public function test_no_se_puede_comprar_para_un_dia_fuera_del_calendario(): void
+    {
+        AforoDiario::where('fecha', $this->fechaVisita)->delete();
+
+        $this->expectException(DiaNoDisponibleException::class);
         $this->comprar();
     }
 
@@ -309,10 +311,9 @@ class NucleoCompraTest extends TestCase
 
     // ═══ Expiración ═══
 
-    public function test_la_expiracion_libera_el_aforo(): void
+    public function test_la_compra_sin_pagar_expira_a_los_quince_minutos(): void
     {
         $compra = $this->comprar(3);
-        $this->assertSame(3, AforoDiario::find($this->fechaVisita)->reservados);
 
         // Han pasado 16 minutos sin pagar.
         $compra->update(['fecha_compra' => now()->subMinutes(16)]);
@@ -320,7 +321,6 @@ class NucleoCompraTest extends TestCase
         (new ExpirarComprasPendientes())->handle(app(\App\Services\Auditoria\BitacoraService::class));
 
         $this->assertSame(Compra::EXPIRADA, $compra->refresh()->estado);
-        $this->assertSame(0, AforoDiario::find($this->fechaVisita)->reservados);
     }
 
     public function test_la_expiracion_no_toca_una_compra_ya_pagada(): void
@@ -333,7 +333,6 @@ class NucleoCompraTest extends TestCase
         (new ExpirarComprasPendientes())->handle(app(\App\Services\Auditoria\BitacoraService::class));
 
         $this->assertSame(Compra::PAGADA, $compra->refresh()->estado);
-        $this->assertSame(3, AforoDiario::find($this->fechaVisita)->reservados);
     }
 
     public function test_la_expiracion_no_toca_compras_recientes(): void
@@ -343,6 +342,5 @@ class NucleoCompraTest extends TestCase
         (new ExpirarComprasPendientes())->handle(app(\App\Services\Auditoria\BitacoraService::class));
 
         $this->assertSame(Compra::PENDIENTE_PAGO, $compra->refresh()->estado);
-        $this->assertSame(3, AforoDiario::find($this->fechaVisita)->reservados);
     }
 }

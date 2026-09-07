@@ -47,7 +47,7 @@ class PortalCompraTest extends TestCase
         ]);
 
         $this->fechaVisita = Carbon::parse('next tuesday')->toDateString();
-        AforoDiario::create(['fecha' => $this->fechaVisita, 'cupo_maximo' => 100, 'reservados' => 0]);
+        AforoDiario::create(['fecha' => $this->fechaVisita]);
     }
 
     private function clienteVerificado(): Cliente
@@ -165,6 +165,45 @@ class PortalCompraTest extends TestCase
         $this->assertSame(0, Compra::count());
     }
 
+    // ═══ Calendario de fecha de visita ═══
+
+    public function test_la_pantalla_de_compra_pinta_un_calendario_con_los_dias_abiertos(): void
+    {
+        $respuesta = $this->actingAs($this->clienteVerificado(), 'cliente')
+            ->get('/comprar')
+            ->assertOk();
+
+        // El día abierto es un botón elegible; el calendario se pinta completo.
+        $respuesta->assertSee('data-calendario', false);
+        $respuesta->assertSee('data-dia="' . $this->fechaVisita . '"', false);
+        $respuesta->assertSee('Lunes cerrado');
+    }
+
+    public function test_un_dia_cerrado_no_es_elegible_en_el_calendario(): void
+    {
+        $cerrado = Carbon::parse($this->fechaVisita)->addWeek()->toDateString();
+        AforoDiario::create(['fecha' => $cerrado, 'cerrado' => true, 'motivo_cierre' => 'Contingencia']);
+
+        $this->actingAs($this->clienteVerificado(), 'cliente')
+            ->get('/comprar')
+            ->assertOk()
+            ->assertSee('data-dia="' . $this->fechaVisita . '"', false)
+            ->assertDontSee('data-dia="' . $cerrado . '"', false);
+    }
+
+    public function test_sin_dias_abiertos_la_pantalla_lo_dice_y_no_muestra_el_formulario(): void
+    {
+        AforoDiario::query()->delete();
+
+        $this->actingAs($this->clienteVerificado(), 'cliente')
+            ->get('/comprar')
+            ->assertOk()
+            ->assertSee('No hay fechas disponibles')
+            ->assertDontSee('data-calendario', false);
+    }
+
+    // ═══ Compra ═══
+
     public function test_la_cotizacion_del_portal_la_calcula_el_servidor(): void
     {
         $this->actingAs($this->clienteVerificado(), 'cliente')
@@ -173,7 +212,7 @@ class PortalCompraTest extends TestCase
             ->assertJson(['total_centavos' => 8000, 'pases' => 2]);
     }
 
-    public function test_una_compra_completa_queda_pendiente_y_reserva_aforo(): void
+    public function test_una_compra_completa_queda_pendiente_de_pago(): void
     {
         $this->actingAs($this->clienteVerificado(), 'cliente')
             ->post('/comprar', $this->carrito(1, 1))
@@ -185,7 +224,6 @@ class PortalCompraTest extends TestCase
         $this->assertSame(8000, $compra->total_centavos);
         $this->assertSame(2, $compra->pases_total);
         $this->assertNull($compra->qr_token);
-        $this->assertSame(2, AforoDiario::find($this->fechaVisita)->reservados);
 
         // Se registró el pago iniciado con su referencia.
         $this->assertSame(Pago::INICIADO, Pago::where('id_compra', $compra->id)->first()->estado);

@@ -5,14 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
 
 /**
- * Cupo por día (brief §5.6).
+ * Calendario de operación: qué días abre el zoológico.
  *
- * OJO: los métodos de reserva y liberación usan UPDATE condicional atómico
- * (brief §4.5). No los reescribas como SELECT + save(): dos compras
- * simultáneas sobrevenderían el cupo.
+ * Aquí NO hay cupo. No existe aforo máximo ni mínimo, así que ninguna compra
+ * reserva ni libera lugares: la única pregunta que responde esta tabla es si
+ * la fecha está abierta.
  */
 class AforoDiario extends Model
 {
@@ -21,14 +20,12 @@ class AforoDiario extends Model
     public $incrementing = false;
     protected $keyType = 'string';
 
-    protected $fillable = ['fecha', 'cupo_maximo', 'reservados', 'cerrado', 'motivo_cierre'];
+    protected $fillable = ['fecha', 'cerrado', 'motivo_cierre'];
 
     protected function casts(): array
     {
         return [
-            'cupo_maximo' => 'integer',
-            'reservados'  => 'integer',
-            'cerrado'     => 'boolean',
+            'cerrado' => 'boolean',
         ];
     }
 
@@ -56,46 +53,10 @@ class AforoDiario extends Model
         return Carbon::parse($fecha)->isMonday();
     }
 
-    /** Cupo por omisión, configurable mientras el área operativa lo define (§12). */
-    public static function cupoPorOmision(): int
+    /** Días abiertos de hoy en adelante, para pintar el calendario de compra. */
+    public function scopeAbiertosDesdeHoy($query)
     {
-        return (int) config('taquilla.aforo_cupo_maximo');
-    }
-
-    public function disponibles(): int
-    {
-        return max(0, $this->cupo_maximo - $this->reservados);
-    }
-
-    /**
-     * Reserva $pases de forma atómica. Devuelve false si no había lugar,
-     * si el día está cerrado o si el día no existe.
-     */
-    public static function reservar(string $fecha, int $pases): bool
-    {
-        $filas = DB::table('aforo_diario')
-            ->where('fecha', $fecha)
-            ->where('cerrado', false)
-            ->whereRaw('reservados + ? <= cupo_maximo', [$pases])
-            ->update([
-                'reservados' => DB::raw("reservados + {$pases}"),
-                'updated_at' => now(),
-            ]);
-
-        return $filas > 0;
-    }
-
-    /** Devuelve pases al cupo (compra expirada o cancelada). */
-    public static function liberar(string $fecha, int $pases): bool
-    {
-        $filas = DB::table('aforo_diario')
-            ->where('fecha', $fecha)
-            ->whereRaw('reservados - ? >= 0', [$pases])
-            ->update([
-                'reservados' => DB::raw("reservados - {$pases}"),
-                'updated_at' => now(),
-            ]);
-
-        return $filas > 0;
+        return $query->where('fecha', '>=', now()->toDateString())
+            ->where('cerrado', false);
     }
 }

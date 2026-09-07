@@ -8,10 +8,12 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
 /**
- * Cupo por día (brief §5.6).
+ * Calendario de operación (brief §5.6).
  *
- * Los lunes se generan cerrados: el ZooMAT no abre. Horario del resto de la
- * semana: 8:30 a 16:00.
+ * No administra cupo: no hay aforo máximo ni mínimo. Lo único que se decide
+ * aquí es qué días abre el zoológico. Los lunes se generan cerrados porque el
+ * ZooMAT no abre; el resto de la semana opera de 8:30 a 16:00, y cualquier día
+ * puede cerrarse por contingencia.
  */
 class AforoController extends Controller
 {
@@ -34,27 +36,24 @@ class AforoController extends Controller
             ->get();
 
         return view('admin.aforo.index', [
-            'dias'            => $dias,
-            'desde'           => $desde,
-            'hasta'           => $hasta,
-            'cupoPorOmision'  => AforoDiario::cupoPorOmision(),
+            'dias'  => $dias,
+            'desde' => $desde,
+            'hasta' => $hasta,
         ]);
     }
 
     /**
-     * Crea los días que falten en el rango. No pisa los que ya existen: si un
-     * día ya tiene reservas o cupo ajustado a mano, se respeta.
+     * Crea los días que falten en el rango. No pisa los que ya existen: si a un
+     * día se le cerró la operación a mano, se respeta.
      */
     public function generar(Request $request)
     {
         $datos = $request->validate([
-            'desde'       => ['required', 'date'],
-            'hasta'       => ['required', 'date', 'after_or_equal:desde'],
-            'cupo_maximo' => ['required', 'integer', 'min:0', 'max:100000'],
+            'desde' => ['required', 'date'],
+            'hasta' => ['required', 'date', 'after_or_equal:desde'],
         ], [], [
             'desde' => 'fecha inicial',
             'hasta' => 'fecha final',
-            'cupo_maximo' => 'cupo máximo',
         ]);
 
         $desde = Carbon::parse($datos['desde']);
@@ -83,8 +82,6 @@ class AforoController extends Controller
 
             AforoDiario::create([
                 'fecha'         => $fecha,
-                'cupo_maximo'   => $datos['cupo_maximo'],
-                'reservados'    => 0,
                 'cerrado'       => $esLunes,
                 'motivo_cierre' => $esLunes ? 'Lunes: el zoológico no abre.' : null,
             ]);
@@ -94,10 +91,9 @@ class AforoController extends Controller
         }
 
         $this->bitacora->registrar('aforo_diario', BitacoraService::CREATE, null, [
-            'desde'       => $desde->toDateString(),
-            'hasta'       => $hasta->toDateString(),
-            'cupo_maximo' => $datos['cupo_maximo'],
-            'creados'     => $creados,
+            'desde'   => $desde->toDateString(),
+            'hasta'   => $hasta->toDateString(),
+            'creados' => $creados,
         ]);
 
         if ($creados === 0) {
@@ -113,30 +109,21 @@ class AforoController extends Controller
         $dia = AforoDiario::findOrFail($fecha);
 
         $datos = $request->validate([
-            'cupo_maximo'   => ['required', 'integer', 'min:0', 'max:100000'],
             'cerrado'       => ['nullable', 'boolean'],
             'motivo_cierre' => ['nullable', 'string', 'max:160'],
         ], [], [
-            'cupo_maximo'   => 'cupo máximo',
             'motivo_cierre' => 'motivo de cierre',
         ]);
 
-        // No se puede bajar el cupo por debajo de lo ya reservado: dejaría
-        // compras pagadas sin lugar.
-        if ($datos['cupo_maximo'] < $dia->reservados) {
-            return back()->with('error',
-                "No puedes fijar el cupo en {$datos['cupo_maximo']}: ese día ya tiene {$dia->reservados} pases reservados.");
-        }
-
         $anterior = $dia->getOriginal();
 
-        $dia->cupo_maximo   = $datos['cupo_maximo'];
         $dia->cerrado       = $request->boolean('cerrado');
         $dia->motivo_cierre = $dia->cerrado ? ($datos['motivo_cierre'] ?? null) : null;
         $dia->save();
 
         $this->bitacora->actualizado($dia, $anterior);
 
-        return back()->with('success', "Aforo del {$fecha} actualizado.");
+        return back()->with('success',
+            $dia->cerrado ? "El {$fecha} quedó cerrado." : "El {$fecha} quedó abierto.");
     }
 }

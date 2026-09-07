@@ -1,7 +1,7 @@
 @extends('layouts.interno')
 
-@section('titulo', 'Aforo diario')
-@section('subtitulo', 'Cupo por día · martes a domingo, 8:30 a 16:00')
+@section('titulo', 'Calendario de operación')
+@section('subtitulo', 'Días de apertura · martes a domingo, 8:30 a 16:00')
 
 @section('contenido')
 
@@ -21,17 +21,12 @@
                 <input type="date" name="hasta" class="input"
                        value="{{ old('hasta', $hasta->toDateString()) }}" required>
             </div>
-            <div>
-                <label class="label">Cupo máximo</label>
-                <input type="number" name="cupo_maximo" min="0" class="input w-32"
-                       value="{{ old('cupo_maximo', $cupoPorOmision) }}" required>
-            </div>
             <button type="submit" class="btn-primary">Generar</button>
         </form>
 
         <p class="mt-3 text-xs text-texto-suave">
             Los lunes se crean cerrados automáticamente. Los días que ya existan no se modifican,
-            así que puedes ejecutarlo sin miedo a pisar cupos ajustados a mano.
+            así que puedes ejecutarlo sin miedo a pisar cierres puestos a mano.
         </p>
     </div>
 
@@ -60,43 +55,28 @@
                     <thead>
                         <tr class="titulo bg-jade text-left text-[11px] text-white">
                             <th class="px-4 py-3">Fecha</th>
-                            <th class="px-4 py-3 text-right">Cupo</th>
-                            <th class="px-4 py-3 text-right">Reservados</th>
-                            <th class="px-4 py-3 text-right">Disponibles</th>
                             <th class="px-4 py-3">Estado</th>
+                            <th class="px-4 py-3">Motivo del cierre</th>
                             <th class="px-4 py-3">Ajustar</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach ($dias as $dia)
-                            @php
-                                $ocupacion = $dia->cupo_maximo > 0
-                                    ? round($dia->reservados / $dia->cupo_maximo * 100)
-                                    : 0;
-                            @endphp
                             <tr class="border-b border-borde transition-colors last:border-0 hover:bg-jade/4
                                        {{ $dia->cerrado ? 'bg-arena/15' : '' }}">
                                 <td class="px-4 py-2.5">
                                     <p class="font-medium">{{ $dia->fecha->translatedFormat('d/m/Y') }}</p>
                                     <p class="text-xs text-texto-suave">{{ $dia->fecha->translatedFormat('l') }}</p>
                                 </td>
-                                <td class="px-4 py-2.5 text-right tabular-nums">{{ number_format($dia->cupo_maximo) }}</td>
-                                <td class="px-4 py-2.5 text-right tabular-nums">
-                                    {{ number_format($dia->reservados) }}
-                                    <span class="text-xs text-texto-suave">({{ $ocupacion }}%)</span>
-                                </td>
-                                <td class="px-4 py-2.5 text-right font-medium tabular-nums">
-                                    {{ number_format($dia->disponibles()) }}
-                                </td>
                                 <td class="px-4 py-2.5">
                                     @if ($dia->cerrado)
                                         <span class="badge-inactivo">cerrado</span>
-                                        @if ($dia->motivo_cierre)
-                                            <p class="mt-1 max-w-40 text-[11px] text-texto-suave">{{ $dia->motivo_cierre }}</p>
-                                        @endif
                                     @else
                                         <span class="badge-activo">abierto</span>
                                     @endif
+                                </td>
+                                <td class="px-4 py-2.5 text-xs text-texto-suave">
+                                    {{ $dia->motivo_cierre ?: '—' }}
                                 </td>
                                 <td class="px-4 py-2.5">
                                     <details>
@@ -105,8 +85,6 @@
                                               action="{{ route('admin.aforo.update', $dia->fecha->toDateString()) }}"
                                               class="mt-2 grid max-w-xs gap-2">
                                             @csrf @method('PUT')
-                                            <input type="number" name="cupo_maximo" min="{{ $dia->reservados }}"
-                                                   class="input py-1.5 text-xs" value="{{ $dia->cupo_maximo }}" required>
                                             <label class="flex items-center gap-2 text-xs">
                                                 <input type="checkbox" name="cerrado" value="1"
                                                        class="accent-jade" @checked($dia->cerrado)>
@@ -127,6 +105,7 @@
     @endif
 
     <p class="mt-4 text-xs text-texto-suave">
-        El cupo no puede bajarse por debajo de los pases ya reservados: dejaría compras pagadas sin lugar.
+        No hay cupo máximo ni mínimo: la venta de un día abierto es ilimitada. Cerrar un día solo
+        impide comprar boletos nuevos para esa fecha; las compras ya emitidas no se tocan.
     </p>
 @endsection

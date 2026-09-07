@@ -2,7 +2,6 @@
 
 namespace App\Jobs;
 
-use App\Models\AforoDiario;
 use App\Models\Compra;
 use App\Services\Auditoria\BitacoraService;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -11,11 +10,11 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Expira compras sin pagar y LIBERA el aforo que tenían reservado
- * (brief §5.7: a los 15 minutos).
+ * Expira las compras que llevan 15 minutos sin pagarse (brief §5.7).
  *
- * Sin esto, un carrito abandonado bloquea lugares para siempre y el
- * zoológico se queda vendiendo menos de su cupo real.
+ * Ya no libera aforo —no hay cupo que liberar—, pero el job sigue siendo
+ * necesario: sin él, un carrito abandonado se queda como `pendiente_pago`
+ * para siempre y ensucia cortes, conciliación y la vista del visitante.
  *
  * Programado en routes/console.php.
  */
@@ -50,14 +49,10 @@ class ExpirarComprasPendientes implements ShouldQueue
                 $fresca->estado = Compra::EXPIRADA;
                 $fresca->save();
 
-                // Devolver los lugares al cupo del día.
-                AforoDiario::liberar($fresca->fecha_visita->toDateString(), $fresca->pases_total);
-
                 $bitacora->registrar('compras', BitacoraService::UPDATE, (string) $fresca->id, [
                     'folio'           => $fresca->folio,
-                    'estado'          => Compra::EXPIRADA,
-                    'pases_liberados' => $fresca->pases_total,
-                    'fecha_visita'    => $fresca->fecha_visita->toDateString(),
+                    'estado'       => Compra::EXPIRADA,
+                    'fecha_visita' => $fresca->fecha_visita->toDateString(),
                 ]);
 
                 $expiradas++;

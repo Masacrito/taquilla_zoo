@@ -32,7 +32,7 @@
                     ['ruta' => 'admin.users.index',     'patron' => 'admin.users.*',     'texto' => 'Usuarios',  'permisos' => ['gestion_usuarios', 'crear_usuarios', 'editar_usuarios']],
                     ['ruta' => 'admin.rubros.index',    'patron' => 'admin.rubros.*',    'texto' => 'Rubros',    'permisos' => ['gestion_rubros', 'editar_rubros']],
                     ['ruta' => 'admin.catalogos.index', 'patron' => 'admin.catalogos.*', 'texto' => 'Catálogos', 'permisos' => ['gestion_catalogos', 'editar_catalogos']],
-                    ['ruta' => 'admin.aforo.index',     'patron' => 'admin.aforo.*',     'texto' => 'Aforo',     'permisos' => ['gestion_aforo']],
+                    ['ruta' => 'admin.aforo.index',     'patron' => 'admin.aforo.*',     'texto' => 'Calendario','permisos' => ['gestion_aforo']],
                     ['ruta' => 'admin.compras.index',   'patron' => 'admin.compras.*',   'texto' => 'Compras',   'permisos' => ['gestion_clientes']],
                     ['ruta' => 'admin.clientes.index',  'patron' => 'admin.clientes.*',  'texto' => 'Visitantes','permisos' => ['gestion_clientes']],
                     ['ruta' => 'admin.cortes',          'patron' => 'admin.cortes',      'texto' => 'Cortes',    'permisos' => ['generar_cortes']],

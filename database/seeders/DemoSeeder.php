@@ -24,13 +24,13 @@ use Illuminate\Support\Carbon;
  */
 class DemoSeeder extends Seeder
 {
-    /** Días hacia adelante para los que se genera cupo. */
-    private const DIAS_DE_AFORO = 60;
+    /** Días hacia adelante que se abren en el calendario. */
+    private const DIAS_DE_CALENDARIO = 60;
 
     public function run(): void
     {
         $this->rubrosDePrueba();
-        $this->aforoDePrueba();
+        $this->calendarioDePrueba();
 
         $this->command?->warn('  Datos de PRUEBA cargados. Los precios son inventados: reemplázalos en /admin/rubros.');
     }
@@ -69,11 +69,9 @@ class DemoSeeder extends Seeder
         }
     }
 
-    private function aforoDePrueba(): void
+    private function calendarioDePrueba(): void
     {
-        $cupo = AforoDiario::cupoPorOmision();
-
-        for ($i = 0; $i < self::DIAS_DE_AFORO; $i++) {
+        for ($i = 0; $i < self::DIAS_DE_CALENDARIO; $i++) {
             $dia   = Carbon::today()->addDays($i);
             $fecha = $dia->toDateString();
 
@@ -85,8 +83,6 @@ class DemoSeeder extends Seeder
 
             AforoDiario::create([
                 'fecha'         => $fecha,
-                'cupo_maximo'   => $cupo,
-                'reservados'    => 0,
                 'cerrado'       => $esLunes,
                 'motivo_cierre' => $esLunes ? 'Lunes: el zoológico no abre.' : null,
             ]);

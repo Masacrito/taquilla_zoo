@@ -8,7 +8,7 @@
         Elige la fecha de tu visita y cuántas personas van en cada tarifa.
     </p>
 
-    @if ($diasDisponibles->isEmpty())
+    @if (! $hayDiasAbiertos)
         <div class="card text-center">
             <p class="text-sm text-texto-suave">
                 No hay fechas disponibles para venta en este momento.
@@ -24,18 +24,61 @@
         <form method="POST" action="{{ route('compras.guardar') }}" data-form-compra>
             @csrf
 
-            <div class="card mb-6">
+            <div class="card mb-6" data-calendario>
                 <label class="label">Fecha de visita</label>
-                <select name="fecha_visita" class="input max-w-xs" required>
-                    <option value="">— Seleccionar —</option>
-                    @foreach ($diasDisponibles as $dia)
-                        <option value="{{ $dia->fecha->toDateString() }}"
-                                @selected(old('fecha_visita', $fechaElegida) === $dia->fecha->toDateString())>
-                            {{ $dia->fecha->translatedFormat('l d/m/Y') }}
-                            — {{ number_format($dia->disponibles()) }} lugares
-                        </option>
+
+                {{-- El valor viaja aquí; los botones de abajo solo lo escriben. --}}
+                <input type="hidden" name="fecha_visita" data-fecha-visita
+                       value="{{ old('fecha_visita', $fechaElegida) }}">
+
+                <div class="mt-2 max-w-sm">
+                    <div class="mb-3 flex items-center justify-between gap-2">
+                        <button type="button" data-mes-anterior
+                                class="rounded-[10px] px-3 py-1.5 text-lg leading-none text-jade
+                                       transition-colors hover:bg-jade/10 disabled:opacity-30"
+                                aria-label="Mes anterior">&lsaquo;</button>
+
+                        <p class="titulo text-sm" data-mes-titulo></p>
+
+                        <button type="button" data-mes-siguiente
+                                class="rounded-[10px] px-3 py-1.5 text-lg leading-none text-jade
+                                       transition-colors hover:bg-jade/10 disabled:opacity-30"
+                                aria-label="Mes siguiente">&rsaquo;</button>
+                    </div>
+
+                    <div class="mb-1 grid grid-cols-7 gap-1 text-center text-[11px] text-texto-suave">
+                        @foreach (['L', 'M', 'M', 'J', 'V', 'S', 'D'] as $inicial)
+                            <span>{{ $inicial }}</span>
+                        @endforeach
+                    </div>
+
+                    @foreach ($meses as $mes)
+                        <div class="grid grid-cols-7 gap-1" data-mes="{{ $mes['clave'] }}" data-titulo="{{ $mes['titulo'] }}" hidden>
+                            @foreach ($mes['celdas'] as $celda)
+                                @if ($celda === null)
+                                    <span></span>
+                                @elseif ($celda['abierto'])
+                                    <button type="button"
+                                            data-dia="{{ $celda['fecha'] }}"
+                                            class="aspect-square rounded-[10px] border border-borde text-sm
+                                                   tabular-nums transition-colors
+                                                   hover:border-jade hover:bg-jade/10
+                                                   data-[elegido]:border-jade data-[elegido]:bg-jade
+                                                   data-[elegido]:font-semibold data-[elegido]:text-white">
+                                        {{ $celda['numero'] }}
+                                    </button>
+                                @else
+                                    <span class="flex aspect-square items-center justify-center rounded-[10px]
+                                                 text-sm tabular-nums text-texto-suave/40"
+                                          title="No disponible">{{ $celda['numero'] }}</span>
+                                @endif
+                            @endforeach
+                        </div>
                     @endforeach
-                </select>
+                </div>
+
+                <p class="mt-3 text-sm" data-fecha-elegida></p>
+
                 <p class="mt-2 text-xs text-texto-suave">
                     Martes a domingo, 8:30 a 16:00 hrs. Lunes cerrado.
                 </p>
@@ -118,6 +161,71 @@
             (function () {
                 const form = document.querySelector('[data-form-compra]');
                 if (!form) return;
+
+                // ── Calendario de fecha de visita ──────────────────────────
+                // Los meses ya vienen pintados desde el servidor: aquí solo se
+                // muestra uno a la vez y se escribe la fecha en el campo
+                // oculto. Cambiar de mes no recarga, así que no se pierden las
+                // cantidades ya capturadas.
+                (function () {
+                    const caja = form.querySelector('[data-calendario]');
+                    if (!caja) return;
+
+                    const campo    = caja.querySelector('[data-fecha-visita]');
+                    const titulo   = caja.querySelector('[data-mes-titulo]');
+                    const leyenda  = caja.querySelector('[data-fecha-elegida]');
+                    const anterior = caja.querySelector('[data-mes-anterior]');
+                    const siguiente = caja.querySelector('[data-mes-siguiente]');
+                    const meses    = Array.from(caja.querySelectorAll('[data-mes]'));
+                    if (!meses.length) return;
+
+                    const titulos = meses.map((m) => m.dataset.mes);
+                    let visible = 0;
+
+                    // Los títulos legibles los pinta el servidor en el atributo
+                    // data-titulo de cada mes.
+                    const mostrarMes = (i) => {
+                        visible = Math.min(Math.max(i, 0), meses.length - 1);
+                        meses.forEach((m, j) => { m.hidden = j !== visible; });
+                        titulo.textContent = meses[visible].dataset.titulo;
+                        anterior.disabled = visible === 0;
+                        siguiente.disabled = visible === meses.length - 1;
+                    };
+
+                    const formato = new Intl.DateTimeFormat('es-MX', {
+                        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+                    });
+
+                    const elegir = (fecha) => {
+                        campo.value = fecha;
+
+                        caja.querySelectorAll('[data-dia]').forEach((b) => {
+                            b.toggleAttribute('data-elegido', b.dataset.dia === fecha);
+                        });
+
+                        // Se construye a mediodía para que el desfase de zona
+                        // horaria no recorra la fecha un día hacia atrás.
+                        leyenda.textContent = fecha
+                            ? 'Visita: ' + formato.format(new Date(fecha + 'T12:00:00'))
+                            : '';
+                    };
+
+                    caja.addEventListener('click', (e) => {
+                        const dia = e.target.closest('[data-dia]');
+                        if (dia) elegir(dia.dataset.dia);
+                    });
+
+                    anterior.addEventListener('click', () => mostrarMes(visible - 1));
+                    siguiente.addEventListener('click', () => mostrarMes(visible + 1));
+
+                    // Si ya venía una fecha (por old() o por la URL), se abre
+                    // en su mes y queda marcada.
+                    const previa = campo.value;
+                    const indice = previa ? titulos.indexOf(previa.slice(0, 7)) : -1;
+
+                    mostrarMes(indice >= 0 ? indice : 0);
+                    if (previa) elegir(previa);
+                })();
 
                 const salidaTotal = form.querySelector('[data-total]');
                 const salidaPases = form.querySelector('[data-pases]');

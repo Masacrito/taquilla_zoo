@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Exceptions\AforoAgotadoException;
+use App\Exceptions\DiaNoDisponibleException;
 use App\Models\AforoDiario;
 use App\Models\Compra;
 use App\Models\Estado;
@@ -16,6 +16,7 @@ use App\Services\Venta\CotizarCompraService;
 use App\Services\Venta\RegistrarCompraService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -37,17 +38,19 @@ class CompraController extends Controller
     {
         $fecha = $request->query('fecha');
 
+        $abiertos = AforoDiario::abiertosDesdeHoy()
+            ->orderBy('fecha')
+            ->get()
+            ->map(fn ($dia) => $dia->fecha->toDateString())
+            ->flip();
+
         return view('publico.comprar', [
             'rubros'         => $fecha
                 ? Rubro::vigentes($fecha)->with('tipoAcceso')->orderBy('tipo')->get()
                 : Rubro::vigentes()->with('tipoAcceso')->orderBy('tipo')->get(),
-            'fechaElegida'   => $fecha,
-            'diasDisponibles' => AforoDiario::where('fecha', '>=', now()->toDateString())
-                ->where('cerrado', false)
-                ->whereColumn('reservados', '<', 'cupo_maximo')
-                ->orderBy('fecha')
-                ->limit(60)
-                ->get(),
+            'fechaElegida'    => $fecha,
+            'meses'           => $this->rejillaDeMeses($abiertos),
+            'hayDiasAbiertos' => $abiertos->isNotEmpty(),
             'paises'   => Pais::activos()->orderBy('nombre')->get(),
             'estados'  => Estado::activos()->orderBy('nombre')->get(),
             'municipios' => Municipio::activos()->orderBy('nombre')->get(),
@@ -84,7 +87,7 @@ class CompraController extends Controller
                 $cotizacion,
                 $datos['fecha_visita'],
             );
-        } catch (AforoAgotadoException $e) {
+        } catch (DiaNoDisponibleException $e) {
             return back()->withInput()->with('error', $e->getMessage());
         }
 
@@ -182,5 +185,46 @@ class CompraController extends Controller
             'fecha_visita' => 'fecha de visita',
             'renglones'    => 'boletos',
         ]);
+    }
+
+    /**
+     * Rejilla del calendario de compra: los próximos meses, con cada día
+     * marcado como abierto o no.
+     *
+     * Esto es armado de vista, no regla de negocio: la única fuente sobre qué
+     * días abre el zoológico sigue siendo el calendario de operación. Se
+     * pintan los meses completos —con los huecos del inicio— porque un
+     * calendario que empieza a media semana se lee mal.
+     */
+    private function rejillaDeMeses(\Illuminate\Support\Collection $abiertos, int $meses = 3): array
+    {
+        $hoy     = Carbon::today();
+        $rejilla = [];
+
+        for ($m = 0; $m < $meses; $m++) {
+            $primero = $hoy->copy()->startOfMonth()->addMonths($m);
+            $ultimo  = $primero->copy()->endOfMonth();
+
+            // La semana arranca en lunes; los días previos al día 1 van vacíos.
+            $celdas = array_fill(0, $primero->dayOfWeekIso - 1, null);
+
+            for ($dia = $primero->copy(); $dia->lte($ultimo); $dia->addDay()) {
+                $fecha = $dia->toDateString();
+
+                $celdas[] = [
+                    'fecha'   => $fecha,
+                    'numero'  => $dia->day,
+                    'abierto' => $abiertos->has($fecha),
+                ];
+            }
+
+            $rejilla[] = [
+                'clave'  => $primero->format('Y-m'),
+                'titulo' => ucfirst($primero->translatedFormat('F Y')),
+                'celdas' => $celdas,
+            ];
+        }
+
+        return $rejilla;
     }
 }

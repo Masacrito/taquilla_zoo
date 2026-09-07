@@ -51,7 +51,7 @@ class PantallaAccesosTest extends TestCase
         ]);
 
         $this->hoy = Carbon::today()->toDateString();
-        AforoDiario::create(['fecha' => $this->hoy, 'cupo_maximo' => 100]);
+        AforoDiario::create(['fecha' => $this->hoy]);
     }
 
     private function taquillero(): Cuenta

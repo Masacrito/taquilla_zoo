@@ -16,7 +16,7 @@
     </div>
 
     <p class="mt-8 text-xs text-texto-suave">
-        Los módulos de rubros, catálogos, aforo, cortes y estadísticas se habilitan en la
+        Los módulos de rubros, catálogos, calendario, cortes y estadísticas se habilitan en la
         siguiente fase.
     </p>
 @endsection

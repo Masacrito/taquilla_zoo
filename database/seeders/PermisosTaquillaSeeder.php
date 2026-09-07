@@ -25,7 +25,7 @@ class PermisosTaquillaSeeder extends Seeder
         'editar_rubros'          => ['descripcion' => 'Crear y editar rubros y sus precios',       'roles' => ['Administrador']],
         'gestion_catalogos'      => ['descripcion' => 'Ver los catálogos del sistema',             'roles' => ['Administrador']],
         'editar_catalogos'       => ['descripcion' => 'Crear y editar registros de catálogos',     'roles' => ['Administrador']],
-        'gestion_aforo'          => ['descripcion' => 'Definir cupo diario y cierres de día',      'roles' => ['Administrador']],
+        'gestion_aforo'          => ['descripcion' => 'Definir días de apertura y cierres',       'roles' => ['Administrador']],
         'gestion_clientes'       => ['descripcion' => 'Consultar clientes y sus compras',          'roles' => ['Administrador']],
         'validar_accesos'        => ['descripcion' => 'Escanear QR y descontar pases en acceso',   'roles' => ['Administrador', 'Taquilla']],
         'ver_bitacora_accesos'   => ['descripcion' => 'Consultar la bitácora de accesos',          'roles' => ['Administrador', 'Taquilla']],

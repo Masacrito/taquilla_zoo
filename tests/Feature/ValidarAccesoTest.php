@@ -59,7 +59,7 @@ class ValidarAccesoTest extends TestCase
 
         // La visita es HOY: es el único día en que el código sirve.
         $this->fechaVisita = Carbon::today()->toDateString();
-        AforoDiario::create(['fecha' => $this->fechaVisita, 'cupo_maximo' => 100]);
+        AforoDiario::create(['fecha' => $this->fechaVisita]);
     }
 
     private function compraPagada(int $pases = 4): Compra
@@ -165,7 +165,7 @@ class ValidarAccesoTest extends TestCase
     public function test_un_qr_de_otra_fecha_se_rechaza(): void
     {
         $otraFecha = Carbon::today()->addDays(3)->toDateString();
-        AforoDiario::create(['fecha' => $otraFecha, 'cupo_maximo' => 50]);
+        AforoDiario::create(['fecha' => $otraFecha]);
 
         $cliente = Cliente::create([
             'correo' => 'otro@example.com', 'password' => Hash::make('secreto12345'),

@@ -47,7 +47,7 @@ class AdminComprasTest extends TestCase
         ]);
 
         $this->fechaVisita = Carbon::parse('next tuesday')->toDateString();
-        AforoDiario::create(['fecha' => $this->fechaVisita, 'cupo_maximo' => 100]);
+        AforoDiario::create(['fecha' => $this->fechaVisita]);
     }
 
     private function admin(): Cuenta
@@ -137,12 +137,10 @@ class AdminComprasTest extends TestCase
 
     // ═══ Cancelación ═══
 
-    public function test_cancelar_libera_el_aforo_y_conserva_el_folio(): void
+    public function test_cancelar_conserva_el_folio(): void
     {
         $compra = $this->compra(4);
         $compra->update(['estado' => Compra::PAGADA]);
-
-        $this->assertSame(4, AforoDiario::find($this->fechaVisita)->reservados);
 
         $this->actingAs($this->admin(), 'web')
             ->put(route('admin.compras.cancelar', $compra), ['motivo' => 'Solicitud del visitante'])
@@ -151,23 +149,26 @@ class AdminComprasTest extends TestCase
         $compra->refresh();
         $this->assertSame(Compra::CANCELADA, $compra->estado);
         $this->assertNotNull(Compra::find($compra->id), 'El folio debe conservarse.');
-        $this->assertSame(0, AforoDiario::find($this->fechaVisita)->reservados);
     }
 
     /**
-     * Si alguien ya entró, esos pases no se pueden revender.
+     * Cancelar no deshace los accesos ya ocurridos: si tres personas entraron,
+     * el corte y la estadística tienen que seguir contándolas.
      */
-    public function test_cancelar_solo_libera_los_pases_no_usados(): void
+    public function test_cancelar_no_borra_los_pases_ya_usados(): void
     {
         $compra = $this->compra(4);
         $compra->update(['estado' => Compra::PAGADA]);
         Compra::consumirPases($compra->id, 3);
 
         $this->actingAs($this->admin(), 'web')
-            ->put(route('admin.compras.cancelar', $compra), ['motivo' => 'Grupo incompleto']);
+            ->put(route('admin.compras.cancelar', $compra), ['motivo' => 'Grupo incompleto'])
+            ->assertRedirect();
 
-        // Se reservaron 4, se usaron 3, solo vuelve 1 al cupo.
-        $this->assertSame(3, AforoDiario::find($this->fechaVisita)->reservados);
+        $compra->refresh();
+        $this->assertSame(Compra::CANCELADA, $compra->estado);
+        $this->assertSame(3, $compra->pases_usados, 'Los accesos ya ocurridos no se deshacen.');
+        $this->assertSame(4, $compra->pases_total);
     }
 
     public function test_no_se_puede_cancelar_una_compra_ya_expirada(): void

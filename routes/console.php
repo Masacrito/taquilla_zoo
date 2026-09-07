@@ -19,9 +19,9 @@ Artisan::command('inspire', function () {
 |
 */
 
-// Compras sin pagar a los 15 minutos → expiradas, y su aforo se libera
-// (brief §5.7). Cada minuto: el retraso máximo en devolver un lugar al cupo
-// es de un minuto.
+// Compras sin pagar a los 15 minutos → expiradas (brief §5.7). No liberan
+// cupo porque no hay cupo, pero sin esto un carrito abandonado se queda como
+// `pendiente_pago` para siempre y ensucia cortes y conciliación.
 Schedule::job(new ExpirarComprasPendientes())
     ->everyMinute()
     ->withoutOverlapping()

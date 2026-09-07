@@ -12,7 +12,7 @@ Gobierno del Estado de Chiapas.
 
 El visitante compra desde su celular, paga en línea, recibe un código QR por correo y lo presenta en el
 acceso. El personal de taquilla escanea el QR y descuenta pases. El administrador gestiona catálogos,
-precios, aforo y cortes.
+precios, calendario y cortes.
 
 **Anteproyecto aprobado.** El alcance de abajo ya está validado; no lo amplíes por iniciativa propia.
 
@@ -126,7 +126,7 @@ La skill sembró 7 permisos. Agrega estos 14 en un seeder nuevo (`PermisosTaquil
 | `editar_rubros` | ✓ | |
 | `gestion_catalogos` | ✓ | |
 | `editar_catalogos` | ✓ | |
-| `gestion_aforo` | ✓ | |
+| `gestion_aforo` | ✓ | |   <!-- calendario de operación -->
 | `gestion_clientes` | ✓ | |
 | `validar_accesos` | ✓ | ✓ |
 | `ver_bitacora_accesos` | ✓ | ✓ |
@@ -169,7 +169,7 @@ auditoría.
 Nunca desde la pantalla de retorno del cliente. El flujo es:
 
 ```
-compra creada  → estado 'pendiente_pago'  (reserva aforo)
+compra creada  → estado 'pendiente_pago'
 webhook banco  → verifica firma HMAC
                → verifica que el monto coincida con total_centavos
                → estado 'pagada' + genera qr_token + encola correo
@@ -178,19 +178,15 @@ webhook banco  → verifica firma HMAC
 El procesamiento del webhook debe ser **idempotente**: los bancos reenvían. Usa
 `pagos.referencia_externa` como llave única; si ya existe procesada, responde 200 y no hagas nada más.
 
-### 4.5 Aforo y pases se descuentan de forma atómica
+### 4.5 Los pases se descuentan de forma atómica
 
-Nada de `SELECT` y luego `UPDATE`. Una sola sentencia condicional:
+**No hay aforo.** El área operativa definió que no existe cupo máximo ni
+mínimo: pueden entrar tres personas o mil, y el visitante compra los boletos
+que quiera. Ninguna compra reserva lugares. Lo único que decide la fecha es el
+calendario de operación: si el día está abierto, la venta es ilimitada.
 
-```php
-// Reserva de aforo
-$ok = DB::table('aforo_diario')
-    ->where('fecha', $fecha)
-    ->where('cerrado', false)
-    ->whereRaw('reservados + ? <= cupo_maximo', [$pases])
-    ->update(['reservados' => DB::raw("reservados + {$pases}")]);
-if ($ok === 0) throw new AforoAgotadoException();
-```
+Donde el descuento atómico sí sigue siendo obligatorio es en los pases. Nada de
+`SELECT` y luego `UPDATE`; una sola sentencia condicional:
 
 ```php
 // Consumo de pases en el acceso
@@ -211,7 +207,7 @@ Los folios son consecutivos, sin huecos, generados dentro de transacción, nunca
 
 ### 4.7 Toda operación sensible va a `movimientos`
 
-Alta/cambio/baja sobre: catálogos, rubros, precios, cuentas, aforo, cancelaciones, reembolsos y accesos.
+Alta/cambio/baja sobre: catálogos, rubros, precios, cuentas, calendario, cancelaciones, reembolsos y accesos.
 Con cuenta responsable y marca de tiempo. La tabla es de solo inserción.
 
 ---
@@ -335,7 +331,7 @@ pagos
   timestamps
 ```
 
-### 5.6 Accesos, reagendas y aforo
+### 5.6 Accesos, reagendas y calendario
 
 ```
 accesos
@@ -345,12 +341,14 @@ accesos
 reagendas
   id, id_compra FK, fecha_anterior, fecha_nueva, motivo, created_at
 
-aforo_diario
-  fecha date PK, cupo_maximo integer, reservados integer DEFAULT 0,
-  cerrado boolean DEFAULT false, motivo_cierre varchar NULL
+aforo_diario                                   -- calendario de operación
+  fecha date PK, cerrado boolean DEFAULT false, motivo_cierre varchar NULL
 ```
 
-Los lunes van `cerrado = true` por defecto (el ZooMAT no abre). Horario: martes a domingo, 8:30 a 16:00.
+`aforo_diario` NO lleva cupo: es el calendario que dice qué días abre el
+zoológico. Los lunes van `cerrado = true` por defecto (el ZooMAT no abre) y
+cualquier día puede cerrarse por contingencia. Horario: martes a domingo,
+8:30 a 16:00.
 
 ### 5.7 Estados de la compra
 
@@ -362,7 +360,9 @@ acceso_parcial  → utilizada
 cancelada       → reembolsada
 ```
 
-`expirada` ocurre a los 15 minutos sin pago y **libera el aforo**. Job programado.
+`expirada` ocurre a los 15 minutos sin pago. Job programado. No libera cupo
+—no hay cupo—, pero sin él un carrito abandonado se queda como
+`pendiente_pago` para siempre y ensucia cortes y conciliación.
 
 ---
 
@@ -373,8 +373,8 @@ servicio, devuelven respuesta. **Cero reglas de negocio en controladores, cero e
 
 ```
 app/Services/Venta/CotizarCompraService.php      -- calcula total contra catálogo vigente
-app/Services/Venta/RegistrarCompraService.php    -- transacción: folio + reserva aforo + detalle
-app/Services/Venta/ReagendarCompraService.php    -- libera aforo viejo, reserva nuevo, bitácora
+app/Services/Venta/RegistrarCompraService.php    -- transacción: folio + cabecera + detalle
+app/Services/Venta/ReagendarCompraService.php    -- cambia la fecha de visita, bitácora
 app/Services/Pago/PasarelaPago.php               -- INTERFAZ
 app/Services/Pago/PasarelaSimulada.php           -- implementación para desarrollo
 app/Services/Pago/ConfirmarPagoService.php       -- procesa webhook, idempotente
@@ -449,7 +449,7 @@ GET   /taquilla/dashboard
 --- middleware: auth + permission:* ---
 /admin/rubros              gestion_rubros / editar_rubros
 /admin/catalogos/*         gestion_catalogos / editar_catalogos
-/admin/aforo               gestion_aforo
+/admin/aforo               gestion_aforo   -- calendario de operación
 /admin/clientes            gestion_clientes
 /admin/compras             gestion_clientes
 /admin/compras/{id}/cancelar     cancelar_compras
@@ -510,6 +510,10 @@ resources/views/emails/     comprobante con QR
 
 El módulo de accesos es una PWA: debe funcionar en tablet, usar la cámara y cachear las compras del día.
 
+La fecha de visita se elige en un **calendario**, no en una lista: el visitante
+ve el mes, los días abiertos son elegibles y los cerrados quedan apagados.
+Cambiar de mes no recarga la página, para no perder las cantidades capturadas.
+
 ### Leyendas obligatorias en el portal
 
 - Horario: **martes a domingo, 8:30 a 16:00 hrs. Lunes cerrado.**
@@ -531,11 +535,11 @@ Trabaja por fases. **Al terminar cada una, detente y reporta antes de seguir.**
 - [ ] Verificar que `php artisan migrate:fresh --seed` corra limpio
 
 ### Fase 1 — Catálogos y administración
-- [ ] Migraciones de catálogos + rubros + aforo
+- [ ] Migraciones de catálogos + rubros + calendario
 - [ ] Seeders: países, estados (32), municipios de Chiapas (124), nacionalidades, subnacionalidades, tipos de acceso
 - [ ] CRUD de rubros con la validación de GRATIS → precio 0
 - [ ] CRUD de catálogos
-- [ ] Pantalla de aforo diario, con lunes cerrados por defecto
+- [ ] Pantalla de calendario de operación, con lunes cerrados por defecto
 - [ ] `BitacoraService` conectado a todos los CRUD
 - [ ] Vista de bitácora de auditoría
 
@@ -544,12 +548,12 @@ Trabaja por fases. **Al terminar cada una, detente y reporta antes de seguir.**
 - [ ] Registro con verificación por código, con throttle
 - [ ] Login cliente + Google (Socialite). **Enlazar cuenta local con OAuth solo si el correo ya está verificado.**
 - [ ] `CotizarCompraService` — con pruebas
-- [ ] `RegistrarCompraService` — transacción completa, con pruebas de concurrencia de aforo
+- [ ] `RegistrarCompraService` — transacción completa, con pruebas de venta simultánea
 - [ ] `PasarelaSimulada` + `ConfirmarPagoService` idempotente
 - [ ] `QrTokenService` + generación de imagen
 - [ ] Correo con comprobante PDF y QR (en cola)
 - [ ] Mis compras + reagendar
-- [ ] Job de expiración a los 15 minutos que libere aforo
+- [ ] Job de expiración a los 15 minutos
 
 ### Fase 3 — Accesos y reportes
 - [ ] `ValidarAccesoService` con descuento atómico, con pruebas de concurrencia
@@ -569,7 +573,7 @@ binding. Nada más.
 No busco cobertura alta, busco estas seis:
 
 1. Cotización: el total calculado ignora cualquier precio que venga del request.
-2. Concurrencia de aforo: 50 compras simultáneas contra 10 lugares dejan exactamente 10.
+2. Venta sin tope: 50 compras simultáneas para el mismo día pasan las 50. No hay cupo que agotar.
 3. Concurrencia de acceso: dos escaneos simultáneos del mismo QR consumen los pases una sola vez.
 4. Idempotencia: el mismo webhook procesado tres veces produce una sola compra pagada.
 5. Snapshot: cambiar el precio de un rubro no altera el importe de compras anteriores.
@@ -584,7 +588,7 @@ No busco cobertura alta, busco estas seis:
 - No guardes montos como float o decimal.
 - No confíes en ningún precio, total o cantidad que venga del navegador.
 - No emitas el QR en la pantalla de retorno del pago.
-- No hagas `SELECT` + `UPDATE` para aforo o pases.
+- No hagas `SELECT` + `UPDATE` para el consumo de pases.
 - No borres registros con `delete()` duro en tablas operativas.
 - No sobrescribas archivos generados por la skill sin avisar primero qué cambiarías y por qué.
 - No implementes facturación CFDI, punto de venta en taquilla ni cola virtual: están fuera de alcance.
@@ -598,7 +602,7 @@ Si el código topa con alguno de estos, **pregunta en vez de asumir**:
 
 | Punto | Estado |
 |---|---|
-| Cupo máximo diario | Sin definir. Usa 2000 como configurable en `.env` |
+| Cupo máximo diario | **Definido: no hay.** Sin aforo máximo ni mínimo; la venta de un día abierto es ilimitada |
 | Tolerancia de la fecha de visita | Sin definir. Asume solo el día programado |
 | Anticipación mínima para reagendar | Sin definir. Asume 24 h |
 | Número máximo de reagendados | Sin definir. Asume 1 |

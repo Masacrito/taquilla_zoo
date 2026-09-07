@@ -66,7 +66,7 @@ return [
     */
 
     // El ZooMAT opera en horario local (martes a domingo, 8:30–16:00) y el
-    // aforo se indexa por fecha: en UTC, las visitas de la tarde caerían en
+    // calendario se indexa por fecha: en UTC, las visitas de la tarde caerían en
     // el día siguiente. Ver brief §13.
     'timezone' => env('APP_TIMEZONE', 'America/Mexico_City'),
 

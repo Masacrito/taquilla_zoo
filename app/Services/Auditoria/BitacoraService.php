@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Auth;
  * Único punto de escritura de la bitácora (brief §4.7).
  *
  * `movimientos` es de SOLO INSERCIÓN: nada la actualiza ni la borra. Toda
- * operación sensible sobre catálogos, rubros, precios, cuentas, aforo,
+ * operación sensible sobre catálogos, rubros, precios, cuentas, calendario,
  * cancelaciones, reembolsos y accesos pasa por aquí.
  */
 class BitacoraService

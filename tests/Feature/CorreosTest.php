@@ -47,7 +47,7 @@ class CorreosTest extends TestCase
         ]);
 
         $this->fechaVisita = Carbon::parse('next tuesday')->toDateString();
-        AforoDiario::create(['fecha' => $this->fechaVisita, 'cupo_maximo' => 100]);
+        AforoDiario::create(['fecha' => $this->fechaVisita]);
     }
 
     private function cliente(): Cliente
