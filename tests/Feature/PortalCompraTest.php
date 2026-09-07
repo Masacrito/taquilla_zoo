@@ -116,6 +116,26 @@ class PortalCompraTest extends TestCase
             ->assertSee('data-revelar', false);
     }
 
+    /**
+     * El domicilio, el conmutador y los correos salen del sitio oficial del
+     * ZooMAT. Si alguien los borra de la plantilla, esta prueba avisa: son el
+     * único modo que tiene el visitante de contactar al zoológico.
+     */
+    public function test_el_pie_lleva_los_datos_oficiales_del_zoomat(): void
+    {
+        $respuesta = $this->get('/')->assertOk();
+
+        $respuesta->assertSee('Calzada Cerro Hueco');
+        $respuesta->assertSee('Tuxtla Gutiérrez, Chiapas');
+        $respuesta->assertSee('961 543 88 90');
+        $respuesta->assertSee('zoomat@zoomat.chiapas.gob.mx');
+        $respuesta->assertSee('atencionescolarzoomat@gmail.com');
+
+        // Las leyendas que el brief §8 marca como obligatorias.
+        $respuesta->assertSee('Martes a domingo, 8:30 a 16:00 hrs. Lunes cerrado.');
+        $respuesta->assertSee('INAPAM');
+    }
+
     // ═══ Registro y verificación ═══
 
     public function test_el_registro_emite_un_codigo_y_deja_el_correo_sin_verificar(): void

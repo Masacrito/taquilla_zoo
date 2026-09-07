@@ -3,10 +3,23 @@
 @section('titulo', 'Comprar boletos')
 
 @section('contenido')
-    <h1 class="titulo mb-1 text-lg">Comprar boletos</h1>
-    <p class="mb-6 text-sm text-texto-suave">
+    <h1 class="titulo text-lg">Comprar boletos</h1>
+    <p class="mt-1 text-sm text-texto-suave">
         Elige la fecha de tu visita y cuántas personas van en cada tarifa.
     </p>
+
+    {{-- Tres pasos, para que se entienda dónde termina esto y qué falta. El
+         tercero se marca distinto: ocurre fuera del sitio, en el banco. --}}
+    <ol class="mb-8 mt-5 flex flex-wrap gap-x-6 gap-y-2 text-xs text-texto-suave">
+        @foreach ([['1', 'Fecha'], ['2', 'Boletos'], ['3', 'Pago en línea']] as [$n, $paso])
+            <li class="flex items-center gap-2">
+                <span class="titulo flex h-6 w-6 items-center justify-center rounded-full
+                             {{ $n === '3' ? 'bg-borde text-texto-suave' : 'bg-jade text-white' }}
+                             text-[10px]">{{ $n }}</span>
+                {{ $paso }}
+            </li>
+        @endforeach
+    </ol>
 
     @if (! $hayDiasAbiertos)
         <div class="card text-center">
@@ -84,6 +97,8 @@
                 </p>
             </div>
 
+            <p class="titulo mb-3 text-xs text-texto-suave">¿Cuántas personas van?</p>
+
             <div class="grid gap-3">
                 @foreach ($rubros as $i => $rubro)
                     <div class="card">
@@ -142,17 +157,39 @@
                 @endforeach
             </div>
 
-            <div class="card mt-6 flex flex-wrap items-center justify-between gap-4">
-                <div>
-                    <p class="titulo text-xs text-texto-suave">Total estimado</p>
-                    <p class="text-2xl font-semibold tabular-nums" data-total>$0.00</p>
-                    <p class="text-xs text-texto-suave">
-                        <span data-pases>0</span> pases. El monto definitivo lo calcula el servidor.
-                    </p>
+            {{-- El resumen se queda pegado al borde inferior mientras se
+                 capturan cantidades: con cinco tarifas y la procedencia
+                 desplegada, el botón quedaba fuera de pantalla en el celular y
+                 había que volver a bajar hasta el final para pagar. --}}
+            <div class="sticky bottom-0 z-10 -mx-4 mt-6 border-t border-borde bg-superficie/95
+                        px-4 py-3 shadow-[0_-8px_24px_rgba(0,0,0,0.06)] backdrop-blur
+                        sm:mx-0 sm:rounded-card sm:border sm:px-6">
+                <div class="flex items-center justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="titulo text-[10px] text-texto-suave">Total estimado</p>
+                        <p class="text-xl font-semibold tabular-nums text-jade sm:text-2xl" data-total>$0.00</p>
+                        <p class="truncate text-[11px] text-texto-suave">
+                            <span data-pases>0</span> pases · lo calcula el servidor
+                        </p>
+                    </div>
+                    <button type="submit" class="btn-primary shrink-0 px-4 sm:px-6">
+                        Continuar al pago
+                    </button>
                 </div>
-                <button type="submit" class="btn-primary">Continuar al pago</button>
             </div>
         </form>
+
+        {{-- Las advertencias que el brief exige, donde de verdad se leen: junto
+             a la decisión, no enterradas en el pie. --}}
+        <div class="mt-8 rounded-card border border-borde bg-arena/15 p-5">
+            <p class="titulo mb-3 text-[11px] text-texto-suave">Ten esto en cuenta</p>
+            <ul class="space-y-1.5 text-xs leading-relaxed text-texto-suave">
+                <li>El tipo de visitante se valida en el acceso. Si no corresponde, ahí se paga el boleto.</li>
+                <li>Tercera edad presenta INAPAM y estudiante presenta credencial.</li>
+                <li>Niño Pavón entra gratis hasta 1.20 m de estatura.</li>
+                <li>El código QR llega por correo. Si no lo ves, revisa spam o correo no deseado.</li>
+            </ul>
+        </div>
 
         <script>
             // Estimación visual únicamente. El total que se cobra lo calcula

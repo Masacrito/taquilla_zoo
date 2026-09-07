@@ -9,26 +9,37 @@
             ← Mis compras
         </a>
 
-        {{-- ═══ QR ═══ --}}
+        {{-- ═══ QR ═══
+             Es lo que el visitante abre parado en la puerta, con el sol de
+             Tuxtla encima: el código va grande, sobre blanco y sin nada que
+             compita. Todo lo demás baja. --}}
         @if ($compra->estaPagada() && filled($compra->qr_token))
             <div class="card mb-6 text-center">
                 <p class="titulo text-sm text-jade">Tu pase de entrada</p>
 
-                <img src="{{ route('compras.qr', $compra->folio) }}"
-                     alt="Código QR de la compra {{ $compra->folio }}"
-                     class="mx-auto my-5 h-64 w-64">
+                <div class="mx-auto my-5 w-fit rounded-card bg-white p-4">
+                    <img src="{{ route('compras.qr', $compra->folio) }}"
+                         alt="Código QR de la compra {{ $compra->folio }}"
+                         class="h-64 w-64">
+                </div>
 
-                <p class="text-sm font-medium">{{ $compra->folio }}</p>
-                <p class="mt-1 text-xs text-texto-suave">
-                    Preséntalo en el acceso el
-                    <strong>{{ $compra->fecha_visita->translatedFormat('d/m/Y') }}</strong>.
+                <p class="text-sm font-medium tabular-nums">{{ $compra->folio }}</p>
+
+                <p class="mx-auto mt-2 max-w-xs text-sm text-texto-suave">
+                    Válido el
+                    <strong class="text-texto">{{ $compra->fecha_visita->translatedFormat('l d \d\e F') }}</strong>,
+                    de 8:30 a 16:00 hrs.
                 </p>
 
                 @if ($compra->pases_usados > 0)
-                    <p class="mt-3 text-xs text-texto-suave">
-                        Pases usados: {{ $compra->pases_usados }} de {{ $compra->pases_total }}.
+                    <p class="mt-4 inline-block rounded-badge bg-arena/25 px-3 py-1.5 text-xs text-texto-suave">
+                        Ya entraron {{ $compra->pases_usados }} de {{ $compra->pases_total }} pases
                     </p>
                 @endif
+
+                <p class="mt-5 text-xs text-texto-suave">
+                    Súbele el brillo a tu pantalla antes de llegar al acceso.
+                </p>
             </div>
         @elseif ($compra->estado === \App\Models\Compra::PENDIENTE_PAGO)
             <div class="card mb-6 text-center">
@@ -98,5 +109,20 @@
             Verifica que el tipo de visitante sea el correcto: se valida en el acceso y, de lo
             contrario, se paga boleto.
         </p>
+
+        {{-- Cómo llegar. Aparece aquí y no en la pantalla de compra porque lo
+             busca quien ya tiene el boleto y va en camino. --}}
+        <div class="card mt-6">
+            <p class="titulo text-sm text-jade">Cómo llegar</p>
+            <address class="mt-3 text-sm not-italic leading-relaxed text-texto-suave">
+                Calzada Cerro Hueco S/N, Col. El Zapotal<br>
+                Tuxtla Gutiérrez, Chiapas, C.P. 29094
+            </address>
+            <div class="mt-4 flex flex-wrap gap-3">
+                <a href="https://www.google.com/maps/search/?api=1&query=Zool%C3%B3gico+Miguel+%C3%81lvarez+del+Toro+Tuxtla+Guti%C3%A9rrez"
+                   target="_blank" rel="noopener" class="btn-outline btn-sm">Abrir en el mapa</a>
+                <a href="tel:+529615438890" class="btn-outline btn-sm">961 543 88 90</a>
+            </div>
+        </div>
     </div>
 @endsection

@@ -201,9 +201,9 @@
                 ['Vivario', 'Serpientes, lagartijas y anfibios de la región, de cerca y en su ambiente.'],
                 ['Herpetario', 'Reptiles vivos y el porqué de su papel en el equilibrio del ecosistema.'],
                 ['Museo del Cocodrilo', 'El cocodrilo de pantano chiapaneco y su historia de casi cien millones de años.'],
-                ['Casa nocturna', 'Murciélagos, armadillos y todo lo que se mueve cuando el zoológico duerme.'],
+                ['Museo Zoológico', 'La colección del naturalista que fundó todo esto, y la fauna que documentó en Chiapas.'],
                 ['Aviarios y pajareras', 'Tucanes, guacamayas, pericos y el quetzal, símbolo de las montañas de Chiapas.'],
-                ['Senderos en selva', 'Dos y medio kilómetros entre jabalíes, tepezcuintles, venados y coatíes.'],
+                ['Senderos en selva', 'Dos y medio kilómetros entre jabalíes, tepezcuintles, venados, coatíes y nutrias.'],
             ] as [$nombre, $descripcion])
                 <article class="overflow-hidden rounded-card border border-borde bg-superficie shadow-soft">
                     {{-- MARCADOR PROVISIONAL — sustituir por foto oficial del ZooMAT.
@@ -241,8 +241,25 @@
         </div>
     </section>
 
-    {{-- ── Cierre ─────────────────────────────────────────────────────── --}}
+    {{-- ── Grupos escolares ───────────────────────────────────────────────
+         Dato del sitio oficial. Es una de las razones por las que la gente
+         entra a buscar al ZooMAT, así que no puede vivir solo en el pie. --}}
     <section class="mt-16" data-revelar="abajo">
+        <div class="card">
+            <h2 class="titulo text-base">¿Vienes con un grupo escolar?</h2>
+            <p class="mt-2 max-w-2xl text-sm leading-relaxed text-texto-suave">
+                Educación Ambiental atiende visitas guiadas de preescolar a universidad, de martes a
+                viernes de 9:30 a 14:30 hrs. El programa dura 40 minutos e incluye charlas, juegos
+                didácticos, cuentos y teatro guiñol; después el grupo recorre el parque por su cuenta
+                o con guía. Se solicita con oficio a
+                <a href="mailto:atencionescolarzoomat@gmail.com"
+                   class="text-jade hover:underline">atencionescolarzoomat@gmail.com</a>.
+            </p>
+        </div>
+    </section>
+
+    {{-- ── Cierre ─────────────────────────────────────────────────────── --}}
+    <section class="mt-6" data-revelar="abajo">
         <div class="card flex flex-wrap items-center justify-between gap-5 border-jade/25 bg-jade-suave">
             <div>
                 <h2 class="titulo text-base text-jade">Tu boleto, en tu celular</h2>

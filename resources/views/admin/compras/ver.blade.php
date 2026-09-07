@@ -113,8 +113,9 @@
 
                     @if ($compra->puedeTransicionarA(\App\Models\Compra::CANCELADA))
                         <p class="mt-2 text-xs text-texto-suave">
-                            El folio se conserva y los {{ $compra->pasesDisponibles() }} pases sin usar
-                            vuelven al cupo del día.
+                            El folio se conserva y el QR deja de servir para los
+                            {{ $compra->pasesDisponibles() }} pases sin usar. Los accesos ya
+                            registrados no se deshacen.
                         </p>
 
                         <form method="POST" action="{{ route('admin.compras.cancelar', $compra) }}"

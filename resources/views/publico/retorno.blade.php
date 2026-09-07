@@ -28,7 +28,7 @@
                 </p>
                 <p class="mt-2 text-xs text-texto-suave">
                     No cierres esta página ni vuelvas a pagar. Si pasan más de 15 minutos sin
-                    confirmarse, la compra se cancela y los lugares se liberan.
+                    confirmarse, la compra expira y tendrás que hacerla de nuevo.
                 </p>
                 <a href="{{ route('compras.retorno', $compra->folio) }}" class="btn-outline mt-5 w-full">
                     Actualizar
@@ -40,7 +40,8 @@
                 <p class="titulo text-sm text-cinabrio">Compra no completada</p>
                 <p class="mt-3 text-sm text-texto-suave">
                     La compra <strong>{{ $compra->folio }}</strong> quedó en estado
-                    <strong>{{ $compra->estado }}</strong>. Los lugares se liberaron.
+                    <strong>{{ str_replace('_', ' ', $compra->estado) }}</strong>. No se te
+                    cobró nada; puedes volver a comprar cuando quieras.
                 </p>
                 <a href="{{ route('compras.crear') }}" class="btn-primary mt-5 w-full">
                     Intentar de nuevo
