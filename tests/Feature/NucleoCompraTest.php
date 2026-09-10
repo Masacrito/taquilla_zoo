@@ -15,6 +15,7 @@ use App\Models\TipoAcceso;
 use App\Services\Acceso\QrTokenService;
 use App\Services\Pago\ConfirmarPagoService;
 use App\Services\Pago\NotificacionPago;
+use App\Services\Pago\PasarelaSimulada;
 use App\Services\Venta\CotizarCompraService;
 use App\Services\Venta\RegistrarCompraService;
 use Database\Seeders\AuthSeeder;
@@ -204,6 +205,110 @@ class NucleoCompraTest extends TestCase
             autorizacion:      'AUTH123',
             payload:           ['folio' => $compra->folio],
         );
+    }
+
+    // ═══ El webhook resuelve la pasarela por la URL, no por la configuración ═══
+
+    public function test_un_proveedor_desconocido_en_la_url_no_procesa_nada(): void
+    {
+        $compra = $this->comprar(2);
+        $cuerpo = $this->cuerpoFirmado($compra);
+
+        $this->call('POST', '/webhooks/pago/banco-inventado', [], [], [],
+            ['HTTP_X-Firma' => $cuerpo['firma'], 'CONTENT_TYPE' => 'application/json'],
+            $cuerpo['json'],
+        )->assertNotFound();
+
+        $this->assertSame(Compra::PENDIENTE_PAGO, $compra->refresh()->estado);
+        $this->assertNull($compra->qr_token);
+    }
+
+    public function test_la_pasarela_simulada_no_se_resuelve_fuera_de_los_entornos_permitidos(): void
+    {
+        // Igual que en producción: la simulada deja de estar permitida.
+        config(['taquilla.pago.entornos_simulada' => []]);
+
+        $compra = $this->comprar(2);
+        $cuerpo = $this->cuerpoFirmado($compra);
+
+        $this->call('POST', '/webhooks/pago/simulada', [], [], [],
+            ['HTTP_X-Firma' => $cuerpo['firma'], 'CONTENT_TYPE' => 'application/json'],
+            $cuerpo['json'],
+        )->assertNotFound();
+
+        $this->assertSame(Compra::PENDIENTE_PAGO, $compra->refresh()->estado);
+        $this->assertSame(0, Pago::where('estado', Pago::APROBADO)->count());
+    }
+
+    // ═══ Un evento ajeno no inventa un pago rechazado ═══
+
+    /**
+     * El caso que de verdad ensuciaba la conciliación.
+     *
+     * Una pasarela real manda VARIOS eventos por el mismo cobro y todos
+     * llevan la referencia. El código anterior leía cualquier evento sin
+     * `estado` como rechazo —por un `?? 'rechazado'`— y dejaba escrito un
+     * pago fallido que nunca ocurrió, contra una compra que después se pagaba
+     * sin problema.
+     */
+    public function test_un_evento_ajeno_con_referencia_valida_no_inventa_un_pago_rechazado(): void
+    {
+        $compra     = $this->comprar(2);
+        $referencia = 'SIM-EVENTO-AJENO-' . $compra->id;
+
+        // El cobro ya está dado de alta, como cuando el visitante fue a pagar.
+        Pago::create([
+            'id_compra'          => $compra->id,
+            'proveedor'          => 'simulada',
+            'referencia_externa' => $referencia,
+            'monto_centavos'     => $compra->total_centavos,
+            'estado'             => Pago::INICIADO,
+        ]);
+
+        // Evento legítimo y bien firmado, con la referencia correcta, pero de
+        // un tipo que no nos toca: no trae `estado`.
+        $json  = json_encode(['referencia' => $referencia, 'tipo' => 'cargo.actualizado']);
+        $firma = app(PasarelaSimulada::class)->firmar($json);
+
+        $this->call('POST', '/webhooks/pago/simulada', [], [], [],
+            ['HTTP_X-Firma' => $firma, 'CONTENT_TYPE' => 'application/json'],
+            $json,
+        )->assertOk();   // 200: si respondiéramos 400, la pasarela lo reintentaría en bucle
+
+        $this->assertSame(0, Pago::where('estado', Pago::RECHAZADO)->count(),
+            'Un evento ajeno no debe quedar escrito como pago rechazado.');
+        $this->assertSame(Pago::INICIADO, Pago::where('referencia_externa', $referencia)->value('estado'));
+        $this->assertSame(Compra::PENDIENTE_PAGO, $compra->refresh()->estado);
+    }
+
+    public function test_un_evento_sin_referencia_ni_estado_tambien_se_ignora(): void
+    {
+        $this->comprar(2);
+        $antes = Pago::count();
+
+        $json  = json_encode(['tipo' => 'cliente.actualizado', 'id' => 'evt_123']);
+        $firma = app(PasarelaSimulada::class)->firmar($json);
+
+        $this->call('POST', '/webhooks/pago/simulada', [], [], [],
+            ['HTTP_X-Firma' => $firma, 'CONTENT_TYPE' => 'application/json'],
+            $json,
+        )->assertOk();
+
+        $this->assertSame($antes, Pago::count(), 'Un evento ajeno no debe escribir pagos.');
+    }
+
+    /** Cuerpo y firma como los que manda la pantalla de pago simulado. */
+    private function cuerpoFirmado(Compra $compra, string $estado = 'aprobado'): array
+    {
+        $json = json_encode([
+            'referencia'     => 'SIM-PRUEBA-' . $compra->id,
+            'estado'         => $estado,
+            'monto_centavos' => $compra->total_centavos,
+            'autorizacion'   => 'AUTH-PRUEBA',
+            'folio'          => $compra->folio,
+        ]);
+
+        return ['json' => $json, 'firma' => app(PasarelaSimulada::class)->firmar($json)];
     }
 
     public function test_el_mismo_webhook_tres_veces_produce_una_sola_compra_pagada(): void

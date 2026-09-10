@@ -46,11 +46,31 @@ class PasarelaSimulada implements PasarelaPago
     {
         $payload = $request->all();
         $firma   = (string) $request->header('X-Firma', '');
+        $valida  = $this->firmaValida($request->getContent(), $firma);
+
+        // Firma mala: se devuelve tal cual para que el webhook responda 400.
+        if (! $valida) {
+            return new NotificacionPago(
+                firmaValida:       false,
+                referenciaExterna: (string) ($payload['referencia'] ?? ''),
+                estado:            NotificacionPago::RECHAZADO,
+                montoCentavos:     (int) ($payload['monto_centavos'] ?? 0),
+                autorizacion:      null,
+                payload:           $payload,
+            );
+        }
+
+        // Firma buena pero el cuerpo no trae el contrato: es un evento que no
+        // nos toca. Antes se leía como rechazo por el `?? 'rechazado'` y
+        // dejaba escrito un pago fallido inexistente.
+        if (! isset($payload['referencia'], $payload['estado'])) {
+            return NotificacionPago::ignorada($payload);
+        }
 
         return new NotificacionPago(
-            firmaValida:       $this->firmaValida($request->getContent(), $firma),
-            referenciaExterna: (string) ($payload['referencia'] ?? ''),
-            estado:            (string) ($payload['estado'] ?? 'rechazado'),
+            firmaValida:       true,
+            referenciaExterna: (string) $payload['referencia'],
+            estado:            (string) $payload['estado'],
             montoCentavos:     (int) ($payload['monto_centavos'] ?? 0),
             autorizacion:      $payload['autorizacion'] ?? null,
             payload:           $payload,

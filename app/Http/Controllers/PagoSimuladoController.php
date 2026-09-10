@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Pago;
 use App\Services\Pago\ConfirmarPagoService;
+use App\Services\Pago\FabricaPasarelas;
 use App\Services\Pago\PasarelaSimulada;
 use Illuminate\Http\Request;
 
@@ -24,10 +25,13 @@ class PagoSimuladoController extends Controller
     public function __construct(
         private readonly PasarelaSimulada $pasarela,
         private readonly ConfirmarPagoService $confirmar,
+        FabricaPasarelas $pasarelas,
     ) {
+        // La lista de entornos permitidos ya no se repite aquí: la fábrica es
+        // la única que responde dónde puede operar la pasarela simulada.
         abort_unless(
-            app()->environment(['local', 'testing'])
-                && config('taquilla.pago.pasarela') === 'simulada',
+            $pasarelas->simuladaPermitida()
+                && config('taquilla.pago.pasarela') === PasarelaSimulada::PROVEEDOR,
             404,
         );
     }

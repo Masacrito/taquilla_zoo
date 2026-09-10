@@ -48,6 +48,14 @@ class ConfirmarPagoService
             return false;
         }
 
+        // Evento legítimo que no nos corresponde. Se responde 200 para que
+        // la pasarela no lo reintente, y no se escribe NADA: registrarlo como
+        // pago rechazado inventaría un rechazo que nunca ocurrió y ensuciaría
+        // la conciliación y los cortes.
+        if ($notificacion->esIgnorable()) {
+            return true;
+        }
+
         if ($notificacion->referenciaExterna === '') {
             return false;
         }
@@ -87,7 +95,7 @@ class ConfirmarPagoService
             return false;
         }
 
-        if ($notificacion->estado !== 'aprobado') {
+        if (! $notificacion->aprobado()) {
             $this->registrarPago($compra, $notificacion, $proveedor, Pago::RECHAZADO);
 
             return true;   // notificación legítima de un pago fallido

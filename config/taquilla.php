@@ -35,6 +35,16 @@ return [
     'pago' => [
         'pasarela'        => env('PAGO_PASARELA', 'simulada'),
         'secreto_webhook' => env('PAGO_SECRETO_WEBHOOK', env('APP_KEY')),
+
+        /*
+         | Entornos donde la pasarela simulada puede operar. Es la ÚNICA
+         | respuesta a «dónde se permite cobrar de mentiras»: la consultan la
+         | fábrica de pasarelas y la pantalla que sustituye a la del banco.
+         |
+         | Para montar un entorno de pruebas parecido a producción, agrega
+         | aquí su nombre (por ejemplo 'staging') y despliega con ese APP_ENV.
+         */
+        'entornos_simulada' => ['local', 'testing'],
     ],
 
 ];
