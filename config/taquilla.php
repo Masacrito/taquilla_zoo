@@ -44,7 +44,7 @@ return [
          | Para montar un entorno de pruebas parecido a producción, agrega
          | aquí su nombre (por ejemplo 'staging') y despliega con ese APP_ENV.
          */
-        'entornos_simulada' => ['local', 'testing'],
+        'entornos_simulada' => ['local', 'testing', 'staging'],
     ],
 
 ];

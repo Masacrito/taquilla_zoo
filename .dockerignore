@@ -1,0 +1,49 @@
+# Dependencias y artefactos: se reconstruyen dentro de la imagen.
+vendor/
+node_modules/
+public/build/
+public/hot
+public/storage
+
+# Entornos y secretos. El .env NUNCA entra a la imagen.
+.env
+.env.*
+!.env.example
+!.env.docker.example
+
+# Estado local que no debe viajar al servidor.
+storage/logs/*
+storage/framework/cache/data/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/framework/testing/*
+bootstrap/cache/*.php
+
+# Pruebas y herramientas: no corren en el contenedor de la aplicación.
+tests/
+phpunit.xml
+.phpunit.cache/
+.phpunit.result.cache
+
+# Control de versiones e IDEs.
+.git/
+.gitignore
+.gitattributes
+.editorconfig
+.idea/
+.vscode/
+.vs/
+.claude/
+.agents/
+
+# El propio Docker, para no invalidar la caché de capas con sus cambios.
+Dockerfile
+compose.yaml
+.dockerignore
+README-Docker.md
+
+# Documentación del proyecto.
+README.md
+README-AUTH.md
+taquilla.md
+*.log

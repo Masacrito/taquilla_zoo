@@ -1,0 +1,145 @@
+# ─────────────────────────────────────────────────────────────────────────
+#  Taquilla ZooMAT — entorno de pruebas tipo producción
+#
+#  Los tres servicios que esta aplicación necesita y que se olvidan fácil
+#  —worker de colas, scheduler y las extensiones de PHP— están declarados
+#  aquí. Si falta alguno, el stack no levanta, en vez de fallar callado:
+#
+#    · sin worker    → el comprobante con el QR nunca sale por correo
+#    · sin scheduler → las compras sin pagar no expiran nunca
+#    · sin ext-gd    → truena al generar el QR, cuando alguien ya pagó
+# ─────────────────────────────────────────────────────────────────────────
+
+x-app: &app
+  build:
+    context: .
+    dockerfile: Dockerfile
+    # `target` explícito y obligatorio: el Dockerfile termina con la etapa
+    # `web` (nginx), así que sin esto Docker construiría ESA por omisión y
+    # los tres servicios de PHP arrancarían con la imagen equivocada.
+    target: runtime
+  image: taquilla-zoomat:staging
+  restart: always
+  env_file: .env
+  volumes:
+    - storage:/var/www/storage
+  networks: [taquilla]
+
+services:
+
+  app:
+    <<: *app
+    container_name: taquilla_app
+    # El único servicio que migra. Los demás esperan a que termine.
+    environment:
+      RUN_MIGRATIONS: "true"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      # php-fpm escuchando significa que el entrypoint ya terminó: esperó a
+      # la base, corrió las migraciones y cacheó la configuración.
+      #
+      # De esto cuelgan `queue` y `scheduler`. Si arrancan antes, revientan
+      # leyendo una tabla `cache` que todavía no existe — las migraciones
+      # que la crean son las que este servicio está corriendo.
+      test: ["CMD", "php", "-r", "exit(@fsockopen('127.0.0.1', 9000) ? 0 : 1);"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+
+  nginx:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: web
+    image: taquilla-zoomat-web:staging
+    container_name: taquilla_nginx
+    restart: always
+    ports:
+      - "${APP_PORT:-8080}:80"
+    depends_on:
+      app:
+        condition: service_healthy
+    healthcheck:
+      # /up es la ruta de salud de Laravel 12. Ejercita nginx, php-fpm y el
+      # arranque del framework de una sola vez.
+      #
+      # 127.0.0.1 y no `localhost`: dentro del contenedor eso resuelve
+      # primero a ::1, nginx solo escucha en IPv4 y el healthcheck fallaba
+      # con "connection refused" mientras el sitio respondía 200 de verdad.
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/up"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks: [taquilla]
+
+  # El comprobante con el QR se encola. Sin este servicio la compra se paga,
+  # el QR se guarda... y el correo no sale nunca, sin error en ningún lado.
+  queue:
+    <<: *app
+    container_name: taquilla_queue
+    command: php artisan queue:work --tries=3 --timeout=120 --max-time=3600
+    depends_on:
+      db:
+        condition: service_healthy
+      app:
+        condition: service_healthy
+    # Que termine el job en curso antes de morir en un redespliegue.
+    stop_grace_period: 130s
+
+  # Equivale al cron de `schedule:run`. Sin esto las compras pendientes de
+  # pago no expiran y ensucian cortes y conciliación.
+  scheduler:
+    <<: *app
+    container_name: taquilla_scheduler
+    command: php artisan schedule:work
+    depends_on:
+      db:
+        condition: service_healthy
+      app:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    container_name: taquilla_db
+    restart: always
+    environment:
+      POSTGRES_DB: ${DB_DATABASE}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # Sin `ports:` a propósito: la base solo se alcanza desde la red interna.
+    # Para inspeccionarla: docker compose exec db psql -U <usuario> <base>
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_DATABASE}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks: [taquilla]
+
+  # Captura los correos en vez de mandarlos. En un entorno de pruebas es lo
+  # que quieres: puedes abrir el comprobante y ver el QR sin arriesgarte a
+  # escribirle a direcciones reales.
+  #
+  # Para probar entrega real, apunta MAIL_* a un SMTP de verdad en el .env y
+  # apaga este servicio.
+  mailpit:
+    image: axllent/mailpit:v1.21
+    container_name: taquilla_mailpit
+    restart: always
+    ports:
+      - "${MAILPIT_PORT:-8025}:8025"   # interfaz web
+    networks: [taquilla]
+
+volumes:
+  pgdata:
+  storage:
+
+networks:
+  taquilla:
+    driver: bridge
