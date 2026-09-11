@@ -11,14 +11,14 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 
 /**
- * Datos de PRUEBA para poder recorrer el flujo completo en desarrollo.
+ * Tarifas vigentes y calendario, para dejar el sistema listo para vender.
  *
- * ⚠️ NO se ejecuta con `migrate:fresh --seed`: hay que llamarlo a mano.
+ * NO se ejecuta con `migrate:fresh --seed`: hay que llamarlo a mano.
  *     php artisan db:seed --class=DemoSeeder
  *
- * ⚠️ LOS PRECIOS SON INVENTADOS. El brief no incluye el tarifario del ZooMAT.
- *     Antes de usar esto en serio, captura las tarifas reales desde
- *     /admin/rubros y desactiva o elimina estos rubros.
+ * Los precios de aquí SÍ son los reales. Si cambian, se capturan desde
+ * /admin/rubros —que además deja rastro en la bitácora— y este archivo se
+ * actualiza para que un despliegue nuevo arranque con las correctas.
  *
  * Es idempotente: puede volver a ejecutarse sin duplicar.
  */
@@ -29,27 +29,39 @@ class DemoSeeder extends Seeder
 
     public function run(): void
     {
-        $this->rubrosDePrueba();
+        $this->tarifas();
         $this->calendarioDePrueba();
 
-        $this->command?->warn('  Datos de PRUEBA cargados. Los precios son inventados: reemplázalos en /admin/rubros.');
+        $this->command?->info('  Tarifas y calendario cargados.');
     }
 
-    private function rubrosDePrueba(): void
+    private function tarifas(): void
     {
-        $nacional   = Nacionalidad::where('nombre', 'NACIONAL')->firstOrFail();
+        $nacional = Nacionalidad::where('nombre', 'NACIONAL')->firstOrFail();
+        $pago     = TipoAcceso::where('nombre', TipoAcceso::PAGO_NORMAL)->firstOrFail();
+
+        // Sin usar mientras los rubros de extranjero y Niño Pavón sigan
+        // comentados abajo. Se dejan para que reactivarlos sea descomentar
+        // una línea y nada más.
         $extranjero = Nacionalidad::where('nombre', 'EXTRANJERO')->firstOrFail();
-        $pago       = TipoAcceso::where('nombre', TipoAcceso::PAGO_NORMAL)->firstOrFail();
         $gratis     = TipoAcceso::where('nombre', TipoAcceso::GRATIS)->firstOrFail();
 
         $sub = fn (string $nombre) => Subnacionalidad::where('nombre', $nombre)->firstOrFail();
 
+        // Tarifas vigentes, en centavos enteros (brief §4.1).
         $rubros = [
-            ['Adulto nacional',    'Visitante mayor de edad con residencia en México.', $nacional,   $sub('ADULTO NACIONAL'),    $pago,   4000],
-            ['Niño nacional',      'De 3 a 12 años. Menores de 1.20 m entran gratis.',  $nacional,   $sub('NIÑO NACIONAL'),      $pago,   2000],
-            ['Adulto extranjero',  'Visitante mayor de edad sin residencia en México.', $extranjero, $sub('ADULTO EXTRANJERO'),  $pago,   8000],
-            ['Niño extranjero',    'De 3 a 12 años, sin residencia en México.',         $extranjero, $sub('NIÑO EXTRANJERO'),    $pago,   4000],
-            ['Niño Pavón',         'Menores de 1.20 m de estatura. Acceso sin costo.',  $nacional,   $sub('NIÑO NACIONAL'),      $gratis, 0],
+            ['Adulto',       'Visitante mayor de edad.',                          $nacional, $sub('ADULTO NACIONAL'),       $pago, 3500],
+            ['Niños',        'De 3 a 12 años.',                                   $nacional, $sub('NIÑO NACIONAL'),         $pago, 3500],
+            ['Tercera Edad', 'Adultos mayores. Se presenta credencial INAPAM.',   $nacional, $sub('TERCERA EDAD NACIONAL'), $pago, 2500],
+
+            // Estos operaban antes y por ahora no se cobran. Se dejan a la
+            // vista para reactivarlos, pero COMENTADOS a propósito: sus
+            // precios nunca se confirmaron con el área operativa y sembrar
+            // cifras inventadas es peor que no tenerlas.
+            //
+            // ['Adulto extranjero', 'Visitante mayor de edad sin residencia en México.', $extranjero, $sub('ADULTO EXTRANJERO'), $pago,   0],
+            // ['Niño extranjero',   'De 3 a 12 años, sin residencia en México.',         $extranjero, $sub('NIÑO EXTRANJERO'),   $pago,   0],
+            // ['Niño Pavón',        'Menores de 1.20 m de estatura. Acceso sin costo.',  $nacional,   $sub('NIÑO NACIONAL'),     $gratis, 0],
         ];
 
         foreach ($rubros as [$tipo, $descripcion, $nacionalidad, $subnacionalidad, $tipoAcceso, $centavos]) {

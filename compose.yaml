@@ -129,20 +129,6 @@ services:
       start_period: 20s
     networks: [taquilla]
 
-  # Captura los correos en vez de mandarlos. En un entorno de pruebas es lo
-  # que quieres: puedes abrir el comprobante y ver el QR sin arriesgarte a
-  # escribirle a direcciones reales.
-  #
-  # Para probar entrega real, apunta MAIL_* a un SMTP de verdad en el .env y
-  # apaga este servicio.
-  mailpit:
-    image: axllent/mailpit:v1.21
-    container_name: taquilla_mailpit
-    restart: always
-    ports:
-      - "${MAILPIT_PORT:-8025}:8025"   # interfaz web
-    networks: [taquilla]
-
 volumes:
   pgdata:
   storage:

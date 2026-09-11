@@ -18,7 +18,6 @@ del QR, correo del comprobante con su PDF, y expiración programada.
 | `queue`     | Worker de colas. **Sin él el comprobante con el QR nunca sale por correo**, y nada reporta error |
 | `scheduler` | Equivale al cron de `schedule:run`. **Sin él las compras sin pagar no expiran** |
 | `db`        | PostgreSQL 16. Sin puerto publicado: solo se alcanza desde la red interna |
-| `mailpit`   | Captura los correos en vez de mandarlos. Se leen en el puerto 8025 |
 
 ## El archivo de entorno y el flag
 
@@ -66,8 +65,21 @@ docker compose --env-file .env.docker up -d --build
 docker compose --env-file .env.docker ps
 ```
 
-Los cinco servicios deben quedar `running`, y `app`, `db`, `nginx` y
-`mailpit` además `healthy`.
+Los cinco servicios deben quedar `running`, y `app`, `db` y `nginx` además
+`healthy`.
+
+### El correo
+
+Sale por el SMTP de `.env.docker` — la cuenta de Gmail que ya opera el
+sistema. Lo único que falta llenar es `MAIL_PASSWORD`, que es la **contraseña
+de aplicación** de Google, no la del correo.
+
+Compruébalo antes de vender nada. El comando envía de forma síncrona, así que
+los errores del SMTP se ven al momento en vez de terminar en un job fallido:
+
+```bash
+docker compose --env-file .env.docker exec app php artisan taquilla:probar-correo tu@correo.mx
+```
 
 ## El día uno no vas a poder vender nada
 
@@ -139,9 +151,10 @@ docker compose logs queue --tail 20
 docker compose logs scheduler --tail 20
 ```
 
-Y la prueba de verdad: compra un boleto, simula el pago aprobado y abre
-Mailpit en `http://<servidor>:8025`. Debe llegar un correo con el QR
-incrustado y el PDF adjunto. Si llega, el recorrido completo funciona.
+Y la prueba de verdad: compra un boleto, simula el pago aprobado y revisa la
+bandeja del correo con el que te registraste. Debe llegar un mensaje con el QR
+incrustado y el PDF adjunto —revisa spam la primera vez—. Si llega, el
+recorrido completo funciona.
 
 ## Antes de exponerlo a internet
 
@@ -153,8 +166,8 @@ incrustado y el PDF adjunto. Si llega, el recorrido completo funciona.
       el callback de Google.
 - [ ] El puerto de `APP_PORT` **no** abierto directo a internet; que pase
       por el proxy.
-- [ ] Mailpit apagado si vas a usar SMTP real, y su puerto 8025 nunca
-      público — cualquiera podría leer los comprobantes.
+- [ ] `MAIL_PASSWORD` con la contraseña de aplicación, y
+      `taquilla:probar-correo` pasando.
 
 ## Producción real
 

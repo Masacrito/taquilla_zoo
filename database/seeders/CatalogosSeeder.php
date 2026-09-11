@@ -90,7 +90,17 @@ class CatalogosSeeder extends Seeder
             Nacionalidad::updateOrCreate(['nombre' => $nombre], ['activo' => true]);
         }
 
-        foreach (['ADULTO NACIONAL', 'ADULTO EXTRANJERO', 'NIÑO NACIONAL', 'NIÑO EXTRANJERO'] as $nombre) {
+        // El patrón es «<TIPO DE VISITANTE> <NACIONALIDAD>». TERCERA EDAD
+        // NACIONAL se agregó porque hay tarifa propia para adultos mayores, y
+        // como subnacionalidad aparte —en vez de colgarla de ADULTO NACIONAL—
+        // para que EstadisticaService pueda reportarlos por separado.
+        foreach ([
+            'ADULTO NACIONAL',
+            'ADULTO EXTRANJERO',
+            'NIÑO NACIONAL',
+            'NIÑO EXTRANJERO',
+            'TERCERA EDAD NACIONAL',
+        ] as $nombre) {
             Subnacionalidad::updateOrCreate(['nombre' => $nombre], ['activo' => true]);
         }
 

@@ -237,7 +237,7 @@ class Fase1Test extends TestCase
         $this->assertSame(32, \App\Models\Estado::count());
         $this->assertSame(124, \App\Models\Municipio::count());
         $this->assertSame(2, Nacionalidad::count());
-        $this->assertSame(4, Subnacionalidad::count());
+        $this->assertSame(5, Subnacionalidad::count());   // las 4 originales + TERCERA EDAD NACIONAL
         $this->assertSame(2, TipoAcceso::count());
     }
 }
