@@ -7,6 +7,7 @@ use App\Models\Permiso;
 use App\Models\Rol;
 use App\Models\Usuario;
 use App\Services\Auditoria\BitacoraService;
+use App\Services\Reporte\TableroService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -18,9 +19,9 @@ class AdminController extends Controller
     {
     }
 
-    public function dashboard()
+    public function dashboard(TableroService $tablero)
     {
-        return view('admin.dashboard');
+        return view('admin.dashboard', $tablero->generar());
     }
 
     public function usersIndex()

@@ -20,6 +20,8 @@
 /storage/*.key
 /storage/pail
 /.claude
+/.agents
+skills-lock.json
 /vendor
 /.vs
 Homestead.json
