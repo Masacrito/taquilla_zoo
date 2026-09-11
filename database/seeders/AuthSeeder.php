@@ -5,14 +5,32 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class AuthSeeder extends Seeder
 {
     /**
-     * Contraseña temporal del Super Admin.
-     * TODO: cambiar al primer login desde el panel admin.
+     * Contraseña inicial del Super Admin.
+     *
+     * NO puede estar escrita en el código. Estaba fija en 'admin123' y este
+     * repositorio es público: cualquiera que encontrara el sitio desplegado
+     * podía entrar al panel con `admin` y esa contraseña, porque además no
+     * hay rotación forzada al primer ingreso.
+     *
+     * Ahora se genera al azar y se imprime UNA sola vez al sembrar. Para
+     * despliegues automatizados se puede fijar con ADMIN_PASSWORD_INICIAL.
+     *
+     * Sin símbolos a propósito: la contraseña se copia a mano desde una
+     * terminal y acaba en archivos .env, donde comillas y `$` dan problemas.
      */
-    private const RESET_PASSWORD_DEFAULT = 'admin123';
+    private function passwordInicial(): string
+    {
+        $fijada = env('ADMIN_PASSWORD_INICIAL');
+
+        return filled($fijada)
+            ? (string) $fijada
+            : Str::password(16, symbols: false);
+    }
 
     public function run(): void
     {
@@ -62,9 +80,11 @@ class AuthSeeder extends Seeder
             'updated_at' => now(),
         ], 'id_usuario');
 
+        $password = $this->passwordInicial();
+
         DB::table('cuentas')->insert([
             'username'   => 'admin',
-            'password'   => Hash::make(self::RESET_PASSWORD_DEFAULT),
+            'password'   => Hash::make($password),
             'estado'     => 'activo',
             'id_usuario' => $usuarioId,
             'id_rol'     => 1,
@@ -73,6 +93,13 @@ class AuthSeeder extends Seeder
         ]);
 
         $this->resincronizarSecuencias();
+
+        // Se imprime UNA vez. No queda en ningún lado más: ni en el código,
+        // ni en la base en claro, ni en la bitácora.
+        $this->command?->newLine();
+        $this->command?->warn("  Super Admin creado —  usuario: admin  |  contraseña: {$password}");
+        $this->command?->warn('  Anótala AHORA: no se vuelve a mostrar. Cámbiala al primer ingreso.');
+        $this->command?->newLine();
     }
 
     /**

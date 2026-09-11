@@ -41,8 +41,65 @@ arranca y dice qué variable falta.
 
 ## Primer arranque
 
-```bash
-cp .env.docker.example .env.docker
+`.env.docker` **no viene en el repositorio** y no debe subirse: es la
+configuración real del servidor. Créalo a mano con estas variables.
+
+```dotenv
+APP_NAME="Taquilla ZooMAT"
+APP_ENV=staging            # habilita la pasarela simulada sin abrir producción
+APP_DEBUG=false            # jamás true: los errores muestran credenciales
+APP_KEY=                   # se genera abajo
+APP_URL=https://tu-dominio-real.mx
+APP_TIMEZONE=America/Mexico_City
+APP_LOCALE=es_MX
+APP_FALLBACK_LOCALE=en
+LOG_CHANNEL=stack
+LOG_LEVEL=warning
+
+APP_PORT=8080              # detrás de un proxy con TLS
+
+# `db` es el servicio de compose, no un host externo.
+# Contraseña ALFANUMÉRICA: compose interpola `$` y una con símbolos
+# provoca fallos de conexión que no dicen que el problema es el password.
+DB_CONNECTION=pgsql
+DB_HOST=db
+DB_PORT=5432
+DB_DATABASE=taquilla_zoomat
+DB_USERNAME=taquilla
+DB_PASSWORD=
+
+# Los tres en base; las tres tablas existen en las migraciones. Con `sync`
+# el correo se enviaría dentro del webhook y el banco lo daría por fallido.
+SESSION_DRIVER=database
+SESSION_LIFETIME=120
+SESSION_SECURE_COOKIE=true     # con TLS delante
+QUEUE_CONNECTION=database
+CACHE_STORE=database
+BROADCAST_CONNECTION=log
+FILESYSTEM_DISK=local
+
+# MAIL_SCHEME es el nombre que lee Laravel 12: `smtp` con 587, `smtps` con
+# 465. MAIL_ENCRYPTION ya no existe. Con Gmail, MAIL_PASSWORD es una
+# contraseña de APLICACIÓN, no la del correo.
+MAIL_MAILER=smtp
+MAIL_SCHEME=smtp
+MAIL_HOST=
+MAIL_PORT=587
+MAIL_USERNAME=
+MAIL_PASSWORD=
+MAIL_FROM_ADDRESS=
+MAIL_FROM_NAME="ZooMAT"
+
+# `simulada` no cobra dinero. Solo opera en los entornos de
+# config/taquilla.php → taquilla.pago.entornos_simulada.
+PAGO_PASARELA=simulada
+PAGO_SECRETO_WEBHOOK=
+
+# Opcional. Sin esto el botón de Google falla. El URI de retorno debe
+# estar dado de alta en la consola de Google con el dominio real.
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_REDIRECT_URI="${APP_URL}/auth/google/callback"
 ```
 
 Genera la llave **una sola vez** y pégala en `APP_KEY` de `.env.docker`:
@@ -98,9 +155,13 @@ Después entra al panel y haz dos cosas, que son las que habilitan la venta:
 1. **Captura los rubros** con las tarifas reales en `/admin/rubros`.
 2. **Genera los días** en `/admin/aforo`.
 
-> El usuario inicial es `admin` / `admin123` y **no hay rotación forzada de
-> contraseña**. Cámbiala antes de que el servidor sea alcanzable desde
-> internet.
+> El seeder crea el usuario `admin` con una contraseña **generada al azar**
+> que imprime UNA sola vez. Anótala en ese momento: no queda guardada en
+> ningún lado consultable. Para fijarla en un despliegue automatizado, usa
+> `ADMIN_PASSWORD_INICIAL` en el `.env.docker`.
+>
+> No hay rotación forzada al primer ingreso, así que cámbiala desde el panel
+> en cuanto entres.
 
 Si solo quieres probar el recorrido sin capturar nada, hay datos ficticios
 —con precios inventados— en `DemoSeeder`:
@@ -160,7 +221,7 @@ recorrido completo funciona.
 
 - [ ] `APP_DEBUG=false`. Con `true`, las pantallas de error de Laravel
       muestran las credenciales de la base.
-- [ ] Contraseña de `admin` cambiada.
+- [ ] Contraseña de `admin` anotada y cambiada desde el panel.
 - [ ] TLS terminado en el proxy del host, y `SESSION_SECURE_COOKIE=true`.
 - [ ] `APP_URL` con el dominio real: de ahí salen los enlaces del correo y
       el callback de Google.

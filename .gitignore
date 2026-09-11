@@ -22,6 +22,13 @@
 /.claude
 /.agents
 skills-lock.json
+
+# Brief del proyecto: se queda local, fuera del repositorio.
+taquilla.md
+
+# Plantilla del entorno de contenedores: se queda local. Las variables
+# estan documentadas en README-Docker.md.
+.env.docker.example
 /vendor
 /.vs
 Homestead.json
