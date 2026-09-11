@@ -40,6 +40,7 @@
                     ['ruta' => 'accesos.escanear',      'patron' => 'accesos.escanear',  'texto' => 'Acceso',    'permisos' => ['validar_accesos']],
                     ['ruta' => 'accesos.bitacora',      'patron' => 'accesos.bitacora',  'texto' => 'Entradas',  'permisos' => ['ver_bitacora_accesos']],
                     ['ruta' => 'admin.bitacora.index',  'patron' => 'admin.bitacora.*',  'texto' => 'Bitácora',  'permisos' => ['ver_bitacora_auditoria']],
+                    ['ruta' => 'admin.errores.index',   'patron' => 'admin.errores.*',   'texto' => 'Fallos',    'permisos' => ['ver_errores']],
                 ];
             @endphp
 

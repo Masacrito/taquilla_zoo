@@ -97,6 +97,23 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => env('DB_SSLMODE', 'prefer'),
+
+            /*
+             | La sesión de Postgres tiene que ir en la MISMA zona que la
+             | aplicación, y por omisión va en UTC.
+             |
+             | Laravel serializa las fechas como 'Y-m-d H:i:s', sin offset.
+             | Postgres recibe ese texto para una columna `timestamptz` y lo
+             | interpreta en la zona de la sesión: con la sesión en UTC, un
+             | `now()` de las 16:00 en Chiapas quedaba guardado como las 16:00
+             | UTC, o sea seis horas en el futuro.
+             |
+             | Se notaba poco porque al leer volvía el mismo texto, pero
+             | cualquier comparación contra `now()` salía desfasada seis horas
+             | — y eso toca los cortes por día, la expiración de compras a los
+             | 15 minutos y la vigencia del QR.
+             */
+            'timezone' => env('DB_TIMEZONE', 'America/Mexico_City'),
         ],
 
         'sqlsrv' => [

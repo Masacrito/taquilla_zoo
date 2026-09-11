@@ -35,6 +35,12 @@ class PermisosTaquillaSeeder extends Seeder
         'cancelar_compras'       => ['descripcion' => 'Cancelar compras pagadas',                  'roles' => ['Administrador']],
         'autorizar_reembolsos'   => ['descripcion' => 'Autorizar solicitudes de reembolso',        'roles' => ['Administrador']],
         'ver_bitacora_auditoria' => ['descripcion' => 'Consultar la bitácora de auditoría',        'roles' => ['Administrador']],
+
+        // Fuera de los 14 del brief §3.3. Se agregó con el registro de fallos
+        // del sistema, que necesita su propia puerta: la bitácora de
+        // auditoría y los errores son cosas distintas y no deben compartir
+        // permiso.
+        'ver_errores'            => ['descripcion' => 'Consultar los fallos del sistema',          'roles' => ['Administrador']],
     ];
 
     public function run(): void

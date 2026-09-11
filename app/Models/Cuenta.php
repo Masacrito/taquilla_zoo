@@ -31,6 +31,29 @@ class Cuenta extends Authenticatable
         return $this->belongsTo(Rol::class, 'id_rol');
     }
 
+    /**
+     * El Super Admin es el usuario 1, el que siembra AuthSeeder.
+     *
+     * Vivía como constante privada dentro de AdminController, donde solo esa
+     * clase podía consultarlo. Se subió aquí porque la notificación de fallos
+     * del sistema también necesita saber quién es, y dos definiciones de
+     * «quién manda» acaban desincronizándose.
+     */
+    public const SUPER_ADMIN_ID = 1;
+
+    public function esSuperAdmin(): bool
+    {
+        return (int) $this->id_usuario === self::SUPER_ADMIN_ID;
+    }
+
+    /** La cuenta del Super Admin, o null si todavía no existe. */
+    public static function superAdmin(): ?self
+    {
+        return static::with('usuario')
+            ->where('id_usuario', self::SUPER_ADMIN_ID)
+            ->first();
+    }
+
     public function isAdmin(): bool
     {
         return optional($this->rol)->nombre === 'Administrador';

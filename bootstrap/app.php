@@ -51,5 +51,16 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // Deja constancia del fallo en la tabla `errores` y avisa al Super
+        // Admin. Va en tabla aparte de `movimientos`, que es la bitácora de
+        // auditoría: un fallo no es la operación de nadie, y el volumen de
+        // los bots sepultaría las entradas que sí tienen valor.
         //
+        // `report` no reemplaza el log de Laravel: se ejecuta ADEMÁS. Si la
+        // base está caída —el peor momento posible— el registro falla pero
+        // el log de archivo sigue recibiendo el fallo.
+        $exceptions->report(function (\Throwable $e) {
+            app(\App\Services\Auditoria\RegistroErroresService::class)
+                ->registrar($e, request());
+        });
     })->create();

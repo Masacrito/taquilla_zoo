@@ -10,6 +10,7 @@ use App\Http\Controllers\ClienteAdminController;
 use App\Http\Controllers\ClienteAuthController;
 use App\Http\Controllers\CompraAdminController;
 use App\Http\Controllers\CompraController;
+use App\Http\Controllers\ErrorController;
 use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\PagoSimuladoController;
 use App\Http\Controllers\PortalController;
@@ -222,6 +223,18 @@ Route::prefix('admin')->name('admin.')->middleware(['guard.exclusivo:web', 'auth
     Route::get('/bitacora', [BitacoraController::class, 'index'])
         ->middleware('permission:ver_bitacora_auditoria')
         ->name('bitacora.index');
+
+    // === FALLOS DEL SISTEMA ===
+    // Permiso propio: la bitácora de auditoría responde quién cambió qué, y
+    // esto qué se rompió. Compartir permiso mezclaría dos cosas distintas.
+    Route::prefix('errores')->name('errores.')
+        ->middleware('permission:ver_errores')
+        ->group(function () {
+            Route::get('/', [ErrorController::class, 'index'])->name('index');
+            Route::get('/{error}', [ErrorController::class, 'ver'])->name('ver');
+            Route::put('/{error}/atender', [ErrorController::class, 'atender'])->name('atender');
+            Route::put('/{error}/reabrir', [ErrorController::class, 'reabrir'])->name('reabrir');
+        });
 });
 
 // === MÓDULO DE ACCESOS (torniquetes) ===

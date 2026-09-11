@@ -4,6 +4,30 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Registro de fallos
+    |--------------------------------------------------------------------------
+    |
+    | `codigo_minimo` decide qué se guarda. En 500 entran los fallos del
+    | servidor y las excepciones no controladas, que es lo que de verdad está
+    | roto. Bajarlo a 400 traería también los 404, que en su mayoría son bots
+    | buscando /wp-admin y solo harían ruido.
+    |
+    | El aviso por correo va al Super Admin, con freno de 30 minutos por tipo
+    | de fallo para que una excepción en bucle no inunde el buzón.
+    |
+    */
+
+    'errores' => [
+        'registrar'          => (bool) env('ERRORES_REGISTRAR', true),
+        'codigo_minimo'      => (int) env('ERRORES_CODIGO_MINIMO', 500),
+        'avisar_por_correo'  => (bool) env('ERRORES_AVISAR_CORREO', true),
+
+        // Días que se conservan los fallos ya atendidos antes de purgarlos.
+        'dias_retencion'     => (int) env('ERRORES_DIAS_RETENCION', 90),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Horario de operación
     |--------------------------------------------------------------------------
     |

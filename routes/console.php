@@ -1,6 +1,7 @@
 <?php
 
 use App\Jobs\ExpirarComprasPendientes;
+use App\Jobs\PurgarErroresAtendidos;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -26,3 +27,13 @@ Schedule::job(new ExpirarComprasPendientes())
     ->everyMinute()
     ->withoutOverlapping()
     ->name('expirar-compras-pendientes');
+
+// Fallos ya atendidos más viejos que el periodo de retención. Una vez al día
+// de madrugada: no corre prisa, y la tabla crece despacio.
+//
+// Solo borra los ATENDIDOS. Un fallo pendiente se conserva por viejo que sea:
+// borrarlo sería perderlo sin que nadie lo hubiera visto.
+Schedule::job(new PurgarErroresAtendidos())
+    ->dailyAt('03:30')
+    ->withoutOverlapping()
+    ->name('purgar-errores-atendidos');

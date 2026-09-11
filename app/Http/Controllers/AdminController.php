@@ -14,8 +14,6 @@ use Illuminate\Support\Facades\Hash;
 
 class AdminController extends Controller
 {
-    private const SUPER_ADMIN_ID = 1;
-
     public function __construct(private readonly BitacoraService $bitacora)
     {
     }
@@ -203,7 +201,7 @@ class AdminController extends Controller
         $this->guardSuperAdminTarget($cuenta);
 
         // No se permite borrar al Super Admin nunca
-        if ((int) $cuenta->id_usuario === self::SUPER_ADMIN_ID) {
+        if ($cuenta->esSuperAdmin()) {
             return back()->with('error', 'No se puede eliminar al Super Administrador.');
         }
 
@@ -235,9 +233,11 @@ class AdminController extends Controller
 
     // === Guards ===
 
+    // Quién es el Super Admin lo define Cuenta, no este controlador: la
+    // notificación de fallos del sistema necesita la misma respuesta.
     private function esSuperAdmin(): bool
     {
-        return (int) Auth::user()->id_usuario === self::SUPER_ADMIN_ID;
+        return Auth::user()->esSuperAdmin();
     }
 
     private function guardSelf(Cuenta $cuenta, string $msg): void
