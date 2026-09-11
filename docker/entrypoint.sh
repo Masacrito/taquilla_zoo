@@ -58,7 +58,19 @@ if [ -n "${DB_HOST}" ]; then
         intentos=$((intentos + 1))
         if [ "$intentos" -ge 30 ]; then
             echo ""
-            echo "ERROR: PostgreSQL no respondió tras 30 intentos." >&2
+            echo "ERROR: no se pudo conectar a PostgreSQL tras 30 intentos." >&2
+            echo "" >&2
+            echo "  Base: ${DB_DATABASE}  Usuario: ${DB_USERNAME}" >&2
+            echo "" >&2
+            echo "  Si la base SÍ está arriba, lo más probable es que se haya" >&2
+            echo "  creado con otras credenciales. El contenedor de Postgres las" >&2
+            echo "  toma por interpolación, o sea del archivo que reciba" >&2
+            echo "  --env-file, mientras que la aplicación las toma de env_file." >&2
+            echo "  Si corriste compose sin --env-file .env.docker, cada uno" >&2
+            echo "  quedó con un juego distinto." >&2
+            echo "" >&2
+            echo "    docker compose --env-file .env.docker down -v" >&2
+            echo "    docker compose --env-file .env.docker up -d --build" >&2
             exit 1
         fi
         printf '.'

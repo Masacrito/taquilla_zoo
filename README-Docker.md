@@ -20,16 +20,36 @@ del QR, correo del comprobante con su PDF, y expiración programada.
 | `db`        | PostgreSQL 16. Sin puerto publicado: solo se alcanza desde la red interna |
 | `mailpit`   | Captura los correos en vez de mandarlos. Se leen en el puerto 8025 |
 
+## El archivo de entorno y el flag
+
+La configuración vive en **`.env.docker`**, no en `.env`. Son dos entornos
+distintos: `.env` es el del desarrollo local con `artisan serve` y apunta a
+una base en `127.0.0.1`; `.env.docker` apunta al contenedor. Separados, se
+puede pasar de uno a otro sin intercambiar archivos.
+
+Por eso **todos los comandos llevan `--env-file .env.docker`**. Para no
+escribirlo cada vez, expórtalo una vez por terminal:
+
+```bash
+export COMPOSE_ENV_FILES=.env.docker
+```
+
+Si se te olvida y existe un `.env` en el directorio, Compose tomaría de ahí
+las credenciales de Postgres mientras la aplicación usa las de `.env.docker`,
+y la base quedaría creada con un juego y consultada con otro. El contenedor
+lo detecta y aborta explicando eso; si no hay `.env`, Compose ni siquiera
+arranca y dice qué variable falta.
+
 ## Primer arranque
 
 ```bash
-cp .env.docker.example .env
+cp .env.docker.example .env.docker
 ```
 
-Genera la llave **una sola vez** y pégala en `APP_KEY` del `.env`:
+Genera la llave **una sola vez** y pégala en `APP_KEY` de `.env.docker`:
 
 ```bash
-docker compose run --rm --no-deps app php artisan key:generate --show
+docker compose --env-file .env.docker run --rm --no-deps app php artisan key:generate --show
 ```
 
 > ⚠️ **No cambies `APP_KEY` nunca más.** Los códigos QR se firman con ella
@@ -42,8 +62,8 @@ Ajusta también `APP_URL`, `DB_PASSWORD` y, si vas a usar correo real, los
 `MAIL_*`. Después:
 
 ```bash
-docker compose up -d --build
-docker compose ps
+docker compose --env-file .env.docker up -d --build
+docker compose --env-file .env.docker ps
 ```
 
 Los cinco servicios deben quedar `running`, y `app`, `db`, `nginx` y
@@ -58,7 +78,7 @@ tarifas y `/comprar` que no hay fechas. Eso es esperado:
 
 ```bash
 # Roles, permisos y catálogos geográficos. Obligatorio.
-docker compose exec app php artisan db:seed --force
+docker compose --env-file .env.docker exec app php artisan db:seed --force
 ```
 
 Después entra al panel y haz dos cosas, que son las que habilitan la venta:
@@ -78,6 +98,9 @@ docker compose exec app php artisan db:seed --class=DemoSeeder --force
 ```
 
 ## Comandos de operación
+
+> Los ejemplos omiten `--env-file .env.docker` por brevedad. Si exportaste
+> `COMPOSE_ENV_FILES` funcionan tal cual; si no, agrégalo.
 
 ```bash
 docker compose logs -f                    # todo

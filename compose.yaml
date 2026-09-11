@@ -20,7 +20,10 @@ x-app: &app
     target: runtime
   image: taquilla-zoomat:staging
   restart: always
-  env_file: .env
+  # `.env.docker`, no `.env`: el segundo es el del desarrollo local con
+  # `artisan serve` y apunta a una base en 127.0.0.1. Separarlos evita
+  # tener que intercambiar archivos para pasar de uno a otro.
+  env_file: .env.docker
   volumes:
     - storage:/var/www/storage
   networks: [taquilla]
@@ -102,14 +105,18 @@ services:
       app:
         condition: service_healthy
 
+  # OJO: este servicio toma sus credenciales por interpolación, y eso sale
+  # del archivo que reciba `--env-file`, NO de `env_file:`. Por eso los tres
+  # valores son obligatorios con `:?`: si se corre compose sin el flag,
+  # aborta diciendo qué falta en vez de levantar una base sin contraseña.
   db:
     image: postgres:16-alpine
     container_name: taquilla_db
     restart: always
     environment:
-      POSTGRES_DB: ${DB_DATABASE}
-      POSTGRES_USER: ${DB_USERNAME}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: "${DB_DATABASE:?DB_DATABASE falta en el archivo de entorno. Corre con --env-file .env.docker}"
+      POSTGRES_USER: "${DB_USERNAME:?DB_USERNAME falta en el archivo de entorno. Corre con --env-file .env.docker}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD:?DB_PASSWORD falta en el archivo de entorno. Corre con --env-file .env.docker}"
     volumes:
       - pgdata:/var/lib/postgresql/data
     # Sin `ports:` a propósito: la base solo se alcanza desde la red interna.
