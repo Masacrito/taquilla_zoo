@@ -1,6 +1,7 @@
 <?php
 
 use App\Jobs\ExpirarComprasPendientes;
+use App\Jobs\GenerarCalendario;
 use App\Jobs\PurgarErroresAtendidos;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -27,6 +28,14 @@ Schedule::job(new ExpirarComprasPendientes())
     ->everyMinute()
     ->withoutOverlapping()
     ->name('expirar-compras-pendientes');
+
+// Mantiene abiertos los meses que el portal ofrece a la venta. Diario y no
+// mensual a propósito: es idempotente, así que en la práctica solo crea días
+// el 1 de cada mes, pero si el scheduler estuvo caído ese día se repone solo.
+Schedule::job(new GenerarCalendario())
+    ->dailyAt('00:10')
+    ->withoutOverlapping()
+    ->name('generar-calendario');
 
 // Fallos ya atendidos más viejos que el periodo de retención. Una vez al día
 // de madrugada: no corre prisa, y la tabla crece despacio.

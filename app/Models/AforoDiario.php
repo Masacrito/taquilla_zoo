@@ -20,13 +20,31 @@ class AforoDiario extends Model
     public $incrementing = false;
     protected $keyType = 'string';
 
-    protected $fillable = ['fecha', 'cerrado', 'motivo_cierre'];
+    /** Quién abrió el día: una persona desde el panel, o la tarea diaria. */
+    public const MANUAL     = 'manual';
+    public const AUTOMATICO = 'automatico';
+
+    protected $fillable = ['fecha', 'cerrado', 'motivo_cierre', 'origen', 'revisado_en'];
 
     protected function casts(): array
     {
         return [
-            'cerrado' => 'boolean',
+            'cerrado'     => 'boolean',
+            'revisado_en' => 'datetime',
         ];
+    }
+
+    public function esAutomatico(): bool
+    {
+        return $this->origen === self::AUTOMATICO;
+    }
+
+    /** El mismo criterio que scopePendientesDeRevision, para un día ya cargado. */
+    public function pendienteDeRevision(): bool
+    {
+        return $this->esAutomatico()
+            && $this->revisado_en === null
+            && $this->fecha->gte(Carbon::today());
     }
 
     /**
@@ -51,6 +69,17 @@ class AforoDiario extends Model
     public static function esLunes(string|Carbon $fecha): bool
     {
         return Carbon::parse($fecha)->isMonday();
+    }
+
+    /**
+     * Días que generó el sistema y que ningún administrador ha mirado.
+     * Solo de hoy en adelante: revisar un día que ya pasó no sirve de nada.
+     */
+    public function scopePendientesDeRevision($query)
+    {
+        return $query->where('origen', self::AUTOMATICO)
+            ->whereNull('revisado_en')
+            ->where('fecha', '>=', now()->toDateString());
     }
 
     /** Días abiertos de hoy en adelante, para pintar el calendario de compra. */

@@ -195,6 +195,11 @@ Route::prefix('admin')->name('admin.')->middleware(['guard.exclusivo:web', 'auth
         ->middleware('permission:gestion_aforo')
         ->name('aforo.generar');
 
+    // Antes de /aforo/{fecha}: si no, «revisar» se tomaría como una fecha.
+    Route::put('/aforo/revisar', [AforoController::class, 'revisar'])
+        ->middleware('permission:gestion_aforo')
+        ->name('aforo.revisar');
+
     Route::put('/aforo/{fecha}', [AforoController::class, 'update'])
         ->middleware('permission:gestion_aforo')
         ->name('aforo.update');

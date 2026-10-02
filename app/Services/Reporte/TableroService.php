@@ -128,6 +128,27 @@ class TableroService
             ];
         }
 
+        // ── Días que abrió el sistema y nadie ha mirado ──
+        // El calendario se extiende solo; el aviso es lo que queda del
+        // «acuérdate de generar días»: revisar si alguno no debería abrir.
+        $porRevisar = AforoDiario::pendientesDeRevision()->orderBy('fecha')->pluck('fecha');
+
+        if ($porRevisar->isNotEmpty()) {
+            $cuantos = $porRevisar->count();
+
+            $avisos[] = [
+                'tipo'  => 'info',
+                'texto' => ($cuantos === 1
+                    ? 'Se generó 1 día automáticamente en el calendario.'
+                    : "Se generaron {$cuantos} días automáticamente en el calendario.")
+                    . ' Revísalos y cierra los que no abran.',
+                'ruta'  => route('admin.aforo.index', [
+                    'desde' => Carbon::parse($porRevisar->first())->toDateString(),
+                    'hasta' => Carbon::parse($porRevisar->last())->toDateString(),
+                ]),
+            ];
+        }
+
         // ── Sin tarifas no se vende ──
         if (Rubro::vigentes()->count() === 0) {
             $avisos[] = [

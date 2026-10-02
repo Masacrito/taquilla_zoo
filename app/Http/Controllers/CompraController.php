@@ -232,8 +232,9 @@ class CompraController extends Controller
      * pintan los meses completos —con los huecos del inicio— porque un
      * calendario que empieza a media semana se lee mal.
      */
-    private function rejillaDeMeses(\Illuminate\Support\Collection $abiertos, int $meses = 3): array
+    private function rejillaDeMeses(\Illuminate\Support\Collection $abiertos): array
     {
+        $meses   = max(1, (int) config('taquilla.calendario.meses_a_la_venta'));
         $hoy     = Carbon::today();
         $rejilla = [];
 

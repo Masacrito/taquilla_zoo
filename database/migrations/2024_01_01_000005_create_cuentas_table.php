@@ -11,6 +11,12 @@ return new class extends Migration {
             $table->bigIncrements('id_cuenta');
             $table->string('username', 60)->unique();
             $table->string('password', 255);
+
+            // Agregado 2026-10-02 («Mi cuenta»). NULL significa que la cuenta
+            // sigue con la contraseña que se le asignó: la inicial del seeder
+            // en el caso del Super Admin. El tablero avisa mientras sea así.
+            $table->timestampTz('password_cambiado_en')->nullable();
+
             $table->enum('estado', ['activo', 'inactivo'])->default('activo');
             $table->unsignedBigInteger('id_usuario');
             $table->unsignedBigInteger('id_rol');

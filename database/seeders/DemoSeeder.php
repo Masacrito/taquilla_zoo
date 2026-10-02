@@ -2,11 +2,11 @@
 
 namespace Database\Seeders;
 
-use App\Models\AforoDiario;
 use App\Models\Nacionalidad;
 use App\Models\Rubro;
 use App\Models\Subnacionalidad;
 use App\Models\TipoAcceso;
+use App\Services\Operacion\GenerarCalendarioService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 
@@ -83,21 +83,10 @@ class DemoSeeder extends Seeder
 
     private function calendarioDePrueba(): void
     {
-        for ($i = 0; $i < self::DIAS_DE_CALENDARIO; $i++) {
-            $dia   = Carbon::today()->addDays($i);
-            $fecha = $dia->toDateString();
-
-            if (AforoDiario::where('fecha', $fecha)->exists()) {
-                continue;   // respeta lo que ya se haya ajustado a mano
-            }
-
-            $esLunes = AforoDiario::esLunes($dia);
-
-            AforoDiario::create([
-                'fecha'         => $fecha,
-                'cerrado'       => $esLunes,
-                'motivo_cierre' => $esLunes ? 'Lunes: el zoológico no abre.' : null,
-            ]);
-        }
+        // El servicio respeta lo que ya se haya ajustado a mano.
+        app(GenerarCalendarioService::class)->generar(
+            Carbon::today(),
+            Carbon::today()->addDays(self::DIAS_DE_CALENDARIO - 1),
+        );
     }
 }

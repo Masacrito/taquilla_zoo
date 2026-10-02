@@ -43,6 +43,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Calendario
+    |--------------------------------------------------------------------------
+    |
+    | Cuántos meses, contando el actual, ofrece el portal a la venta. Es un
+    | solo número para dos cosas que deben coincidir: los meses que pinta el
+    | calendario de compra y hasta dónde mantiene días abiertos la tarea
+    | diaria (App\Jobs\GenerarCalendario).
+    |
+    */
+
+    'calendario' => [
+        'meses_a_la_venta' => (int) env('CALENDARIO_MESES_A_LA_VENTA', 3),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Compra
     |--------------------------------------------------------------------------
     |

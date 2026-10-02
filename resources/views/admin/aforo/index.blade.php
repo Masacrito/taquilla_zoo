@@ -25,10 +25,30 @@
         </form>
 
         <p class="mt-3 text-xs text-texto-suave">
-            Los lunes se crean cerrados automáticamente. Los días que ya existan no se modifican,
+            El sistema mantiene abiertos por su cuenta los próximos
+            {{ config('taquilla.calendario.meses_a_la_venta') }} meses; este formulario es para abrir
+            rangos fuera de eso. Los lunes se crean cerrados y los días que ya existan no se modifican,
             así que puedes ejecutarlo sin miedo a pisar cierres puestos a mano.
         </p>
     </div>
+
+    {{-- Solo existe mientras haya algo que revisar: el mismo criterio que el
+         aviso del tablero, que es el que trae hasta aquí. --}}
+    @if ($pendientes > 0)
+        <div class="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-card border
+                    border-jade/25 bg-jade-suave px-5 py-3.5">
+            <p class="text-sm text-jade">
+                {{ $pendientes === 1 ? 'Hay 1 día generado' : "Hay {$pendientes} días generados" }}
+                automáticamente sin revisar en este rango. Cierra los que no abran y márcalos como revisados.
+            </p>
+            <form method="POST" action="{{ route('admin.aforo.revisar') }}">
+                @csrf @method('PUT')
+                <input type="hidden" name="desde" value="{{ $desde->toDateString() }}">
+                <input type="hidden" name="hasta" value="{{ $hasta->toDateString() }}">
+                <button type="submit" class="btn-primary btn-sm">Marcar como revisados</button>
+            </form>
+        </div>
+    @endif
 
     <form method="GET" class="mb-4 flex flex-wrap items-end gap-3">
         <div>
@@ -57,6 +77,7 @@
                             <th class="px-4 py-3">Fecha</th>
                             <th class="px-4 py-3">Estado</th>
                             <th class="px-4 py-3">Motivo del cierre</th>
+                            <th class="px-4 py-3">Boletos vigentes</th>
                             <th class="px-4 py-3">Ajustar</th>
                         </tr>
                     </thead>
@@ -74,9 +95,23 @@
                                     @else
                                         <span class="badge-activo">abierto</span>
                                     @endif
+                                    @if ($dia->esAutomatico())
+                                        <span class="badge-especial"
+                                              title="{{ $dia->pendienteDeRevision() ? 'Generado por el sistema, sin revisar' : 'Generado por el sistema' }}">
+                                            automático{{ $dia->pendienteDeRevision() ? ' · sin revisar' : '' }}
+                                        </span>
+                                    @endif
                                 </td>
                                 <td class="px-4 py-2.5 text-xs text-texto-suave">
                                     {{ $dia->motivo_cierre ?: '—' }}
+                                </td>
+                                <td class="px-4 py-2.5 text-xs tabular-nums text-texto-suave">
+                                    @if ($fila = $vendido->get($dia->fecha->toDateString()))
+                                        {{ $fila->compras }} {{ $fila->compras == 1 ? 'compra' : 'compras' }}
+                                        · {{ $fila->pases }} {{ $fila->pases == 1 ? 'pase' : 'pases' }}
+                                    @else
+                                        —
+                                    @endif
                                 </td>
                                 <td class="px-4 py-2.5">
                                     <details>
@@ -106,6 +141,7 @@
 
     <p class="mt-4 text-xs text-texto-suave">
         No hay cupo máximo ni mínimo: la venta de un día abierto es ilimitada. Cerrar un día solo
-        impide comprar boletos nuevos para esa fecha; las compras ya emitidas no se tocan.
+        impide comprar boletos nuevos para esa fecha; las compras ya emitidas no se tocan. La columna
+        «Boletos vigentes» dice a cuánta gente habría que avisar.
     </p>
 @endsection

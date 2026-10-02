@@ -23,6 +23,14 @@ return new class extends Migration {
             $table->date('fecha')->primary();
             $table->boolean('cerrado')->default(false);
             $table->string('motivo_cierre', 160)->nullable();
+
+            // Agregado 2026-10-02 (calendario automático). Distingue los días
+            // que abrió una persona ('manual') de los que generó la tarea
+            // diaria ('automatico'). Un día automático con `revisado_en`
+            // vacío es lo que el tablero usa para pedir que alguien lo mire.
+            $table->string('origen', 12)->default('manual');
+            $table->timestampTz('revisado_en')->nullable();
+
             $table->timestampsTz();
         });
     }
