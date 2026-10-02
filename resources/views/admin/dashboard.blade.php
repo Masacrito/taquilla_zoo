@@ -100,21 +100,30 @@
                         No hubo ventas en los últimos siete días.
                     </p>
                 @else
-                    <div class="flex h-40 items-end justify-between gap-2">
+                    <div class="flex h-40 justify-between gap-2">
                         @foreach ($semana['dias'] as $dia)
-                            <div class="group flex flex-1 flex-col items-center justify-end gap-2">
+                            <div class="group flex flex-1 flex-col items-center gap-2">
                                 <p class="text-[10px] tabular-nums text-texto-suave opacity-0
                                           transition-opacity group-hover:opacity-100">
                                     ${{ number_format($dia['centavos'] / 100) }}
                                 </p>
 
-                                {{-- `min-height` para que un día con venta
+                                {{-- El riel ocupa el alto que sobra y la barra
+                                     es un porcentaje de ÉL. Antes el porcentaje
+                                     se pedía sobre una columna sin alto propio:
+                                     no resolvía, y todas las barras quedaban en
+                                     su `min-height` de 4px, vendieran lo que
+                                     vendieran.
+
+                                     `min-height` para que un día con venta
                                      pequeña siga siendo visible y no se
                                      confunda con uno sin ventas. --}}
-                                <div class="w-full rounded-t-[6px] bg-jade transition-colors
-                                            group-hover:bg-jade/80"
-                                     style="height: {{ $dia['porcentaje'] }}%;
-                                            min-height: {{ $dia['centavos'] > 0 ? '4px' : '0' }};"></div>
+                                <div class="flex w-full flex-1 items-end">
+                                    <div class="w-full rounded-t-[6px] bg-jade transition-colors
+                                                group-hover:bg-jade/80"
+                                         style="height: {{ $dia['porcentaje'] }}%;
+                                                min-height: {{ $dia['centavos'] > 0 ? '4px' : '0' }};"></div>
+                                </div>
 
                                 <p class="text-[10px] text-texto-suave">
                                     {{ $dia['fecha']->translatedFormat('D') }}

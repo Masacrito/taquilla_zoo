@@ -24,6 +24,17 @@ use Illuminate\Support\Carbon;
  */
 class DemoSeeder extends Seeder
 {
+    /**
+     * Las tarifas que cobra hoy el zoológico, en centavos (brief §4.1).
+     * Es la única lista: la leen este seeder y el generador de datos de
+     * demostración, que solo vende lo que aparece aquí.
+     */
+    public const TARIFAS_OFICIALES = [
+        'Adulto'       => 3500,
+        'Niños'        => 3500,
+        'Tercera Edad' => 2500,
+    ];
+
     /** Días hacia adelante que se abren en el calendario. */
     private const DIAS_DE_CALENDARIO = 60;
 
@@ -35,7 +46,8 @@ class DemoSeeder extends Seeder
         $this->command?->info('  Tarifas y calendario cargados.');
     }
 
-    private function tarifas(): void
+    /** Público: el generador de demostración lo llama para partir de las tarifas oficiales. */
+    public function tarifas(): void
     {
         $nacional = Nacionalidad::where('nombre', 'NACIONAL')->firstOrFail();
         $pago     = TipoAcceso::where('nombre', TipoAcceso::PAGO_NORMAL)->firstOrFail();
@@ -48,11 +60,12 @@ class DemoSeeder extends Seeder
 
         $sub = fn (string $nombre) => Subnacionalidad::where('nombre', $nombre)->firstOrFail();
 
-        // Tarifas vigentes, en centavos enteros (brief §4.1).
+        $precio = self::TARIFAS_OFICIALES;
+
         $rubros = [
-            ['Adulto',       'Visitante mayor de edad.',                          $nacional, $sub('ADULTO NACIONAL'),       $pago, 3500],
-            ['Niños',        'De 3 a 12 años.',                                   $nacional, $sub('NIÑO NACIONAL'),         $pago, 3500],
-            ['Tercera Edad', 'Adultos mayores. Se presenta credencial INAPAM.',   $nacional, $sub('TERCERA EDAD NACIONAL'), $pago, 2500],
+            ['Adulto',       'Visitante mayor de edad.',                          $nacional, $sub('ADULTO NACIONAL'),       $pago, $precio['Adulto']],
+            ['Niños',        'De 3 a 12 años.',                                   $nacional, $sub('NIÑO NACIONAL'),         $pago, $precio['Niños']],
+            ['Tercera Edad', 'Adultos mayores. Se presenta credencial INAPAM.',   $nacional, $sub('TERCERA EDAD NACIONAL'), $pago, $precio['Tercera Edad']],
 
             // Estos operaban antes y por ahora no se cobran. Se dejan a la
             // vista para reactivarlos, pero COMENTADOS a propósito: sus

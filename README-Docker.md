@@ -163,12 +163,29 @@ Después entra al panel y haz dos cosas, que son las que habilitan la venta:
 > No hay rotación forzada al primer ingreso, así que cámbiala desde el panel
 > en cuanto entres.
 
-Si solo quieres probar el recorrido sin capturar nada, hay datos ficticios
-—con precios inventados— en `DemoSeeder`:
+Para dejar el sistema listo para vender sin capturar nada, `DemoSeeder` carga
+las tarifas oficiales (Adulto $35, Niños $35, Tercera Edad $25) y abre el
+calendario:
 
 ```bash
 docker compose exec app php artisan db:seed --class=DemoSeeder --force
 ```
+
+### Datos de demostración
+
+Para ver el tablero, los cortes y las estadísticas con varios meses de
+operación encima, hay un generador que recorre el flujo real (compra, pago,
+acceso, cancelación, reembolso) con esas mismas tarifas. No envía correos y
+se niega a correr con `APP_ENV=production`.
+
+```bash
+docker compose exec app php artisan taquilla:demo-generar --meses=3
+docker compose exec app php artisan taquilla:demo-generar --limpiar
+```
+
+Todo lo que crea usa correos `@demo.invalid`, que es como `--limpiar` lo
+reconoce. Consume folios: úsalo en una base de pruebas, no donde ya haya
+compras reales.
 
 ## Comandos de operación
 

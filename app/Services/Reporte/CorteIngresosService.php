@@ -101,13 +101,13 @@ class CorteIngresosService
 
     private function porDia(string $columna, string $desde, string $hasta): Collection
     {
-        $dia = DB::raw("CAST({$columna} AS DATE)");
+        $dia = DB::raw("DATE({$columna})");
 
         return $this->baseQuery($columna, $desde, $hasta)
             ->groupBy($dia)
             ->orderBy($dia)
             ->get([
-                DB::raw("CAST({$columna} AS DATE) AS dia"),
+                DB::raw("DATE({$columna}) AS dia"),
                 DB::raw('SUM(compra_detalle.cantidad) AS pases'),
                 DB::raw('SUM(compra_detalle.importe_centavos) AS total_centavos'),
                 DB::raw('COUNT(DISTINCT compras.id) AS compras'),
