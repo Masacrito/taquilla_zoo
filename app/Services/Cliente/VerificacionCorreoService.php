@@ -18,18 +18,24 @@ use Illuminate\Validation\ValidationException;
 class VerificacionCorreoService
 {
     /**
-     * Emite un código nuevo e invalida los anteriores del mismo correo.
+     * Emite un código nuevo e invalida los anteriores del mismo correo y
+     * propósito.
+     *
+     * El propósito separa el registro de la compra como invitado: pedir un
+     * código para comprar sin cuenta no tumba el de un registro en curso, y
+     * sobre todo no sirve para iniciar sesión en la cuenta de ese correo.
      *
      * @throws ValidationException si se excedió el máximo de reenvíos
      */
-    public function emitir(string $correo): string
+    public function emitir(string $correo, string $proposito = VerificacionCorreo::REGISTRO): string
     {
         $correo = mb_strtolower(trim($correo));
 
         $this->verificarLimiteDeReenvios($correo);
 
-        // Un solo código vivo por correo: los previos se consumen.
+        // Un solo código vivo por correo y propósito: los previos se consumen.
         VerificacionCorreo::where('correo', $correo)
+            ->where('proposito', $proposito)
             ->whereNull('consumido_en')
             ->update(['consumido_en' => now()]);
 
@@ -39,6 +45,7 @@ class VerificacionCorreoService
         VerificacionCorreo::create([
             'correo'      => $correo,
             'codigo_hash' => Hash::make($codigo),
+            'proposito'   => $proposito,
             'intentos'    => 0,
             'expira_en'   => now()->addMinutes(VerificacionCorreo::MINUTOS_VIGENCIA),
             'created_at'  => now(),
@@ -53,11 +60,12 @@ class VerificacionCorreoService
      *
      * @throws ValidationException
      */
-    public function validar(string $correo, string $codigo): bool
+    public function validar(string $correo, string $codigo, string $proposito = VerificacionCorreo::REGISTRO): bool
     {
         $correo = mb_strtolower(trim($correo));
 
         $verificacion = VerificacionCorreo::where('correo', $correo)
+            ->where('proposito', $proposito)
             ->whereNull('consumido_en')
             ->latest('id')
             ->first();
@@ -98,6 +106,10 @@ class VerificacionCorreoService
 
     /**
      * Máximo 3 códigos por correo dentro de la ventana de vigencia (§5.3).
+     *
+     * El tope es por correo, sin importar el propósito: lo que limita es
+     * cuántos mensajes recibe un buzón, y alternar entre registro e invitado
+     * no debe duplicarlo.
      */
     private function verificarLimiteDeReenvios(string $correo): void
     {
@@ -119,10 +131,10 @@ class VerificacionCorreoService
      * es suficiente para desarrollo. Para producción hay que configurar un
      * SMTP real (ver README-AUTH.md).
      */
-    public function entregar(string $correo, string $codigo): void
+    public function entregar(string $correo, string $codigo, string $proposito = VerificacionCorreo::REGISTRO): void
     {
         Mail::to($correo)->queue(
-            new CodigoVerificacion($codigo, VerificacionCorreo::MINUTOS_VIGENCIA)
+            new CodigoVerificacion($codigo, VerificacionCorreo::MINUTOS_VIGENCIA, $proposito)
         );
     }
 }

@@ -9,7 +9,9 @@
             Escribe el código de 6 dígitos que te enviamos. Vence en 10 minutos.
         </p>
 
-        <form method="POST" action="{{ route('portal.verificar') }}" class="card grid gap-4">
+        {{-- La pantalla sirve al registro y a la compra como invitado: quien
+             la muestra dice a dónde se envía; por omisión, al registro. --}}
+        <form method="POST" action="{{ $rutaVerificar ?? route('portal.verificar') }}" class="card grid gap-4">
             @csrf
 
             <div>
@@ -28,7 +30,7 @@
             <button type="submit" class="btn-primary w-full">Verificar</button>
         </form>
 
-        <form method="POST" action="{{ route('portal.reenviar') }}" class="mt-4 text-center">
+        <form method="POST" action="{{ $rutaReenviar ?? route('portal.reenviar') }}" class="mt-4 text-center">
             @csrf
             <input type="hidden" name="correo" value="{{ old('correo', $correo) }}">
             <button type="submit" class="text-sm text-jade hover:underline">

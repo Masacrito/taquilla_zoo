@@ -8,6 +8,12 @@
         Elige la fecha de tu visita y cuántas personas van en cada tarifa.
     </p>
 
+    @if ($correoInvitado)
+        <p class="mt-3 inline-block rounded-badge bg-jade-suave px-3 py-1.5 text-xs text-jade">
+            Compras como invitado. Tus boletos llegarán a <strong>{{ $correoInvitado }}</strong>.
+        </p>
+    @endif
+
     {{-- Tres pasos, para que se entienda dónde termina esto y qué falta. El
          tercero se marca distinto: ocurre fuera del sitio, en el banco. --}}
     <ol class="mb-8 mt-5 flex flex-wrap gap-x-6 gap-y-2 text-xs text-texto-suave">

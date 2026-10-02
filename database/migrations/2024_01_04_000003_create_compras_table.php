@@ -18,7 +18,16 @@ return new class extends Migration {
         Schema::create('compras', function (Blueprint $table) {
             $table->id();
             $table->string('folio', 30)->unique();
-            $table->foreignUuid('id_cliente')->constrained('clientes')->restrictOnDelete();
+            // Modificado 2026-10-02 (compra como invitado): ahora admite NULL.
+            // Quien compra sin cuenta no tiene fila en `clientes`.
+            $table->foreignUuid('id_cliente')->nullable()->constrained('clientes')->restrictOnDelete();
+
+            // Agregado 2026-10-02 (compra como invitado). El correo que el
+            // invitado verificó con código: ahí se mandan los boletos. Lleva
+            // valor en TODA compra hecha como invitado, incluso cuando el
+            // correo ya tenía cuenta y la compra quedó ligada a ella; así se
+            // distingue cómo se compró. NULL = compra hecha con sesión.
+            $table->string('correo_invitado', 160)->nullable()->index();
 
             $table->timestampTz('fecha_compra')->useCurrent();
             $table->date('fecha_visita');

@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use App\Models\VerificacionCorreo;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
@@ -23,6 +24,7 @@ class CodigoVerificacion extends Mailable implements ShouldQueue
     public function __construct(
         public string $codigo,
         public int $minutosVigencia,
+        public string $proposito = VerificacionCorreo::REGISTRO,
     ) {
     }
 

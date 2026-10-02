@@ -11,6 +11,7 @@ use App\Models\Pago;
 use App\Models\Pais;
 use App\Models\Rubro;
 use App\Services\Acceso\QrImagenService;
+use App\Services\Cliente\SesionInvitado;
 use App\Services\Pago\PasarelaPago;
 use App\Services\Venta\CotizarCompraService;
 use App\Services\Venta\RegistrarCompraService;
@@ -22,6 +23,11 @@ use Illuminate\Support\Facades\DB;
 /**
  * Portal de compra del visitante (brief §7, guard `cliente`).
  *
+ * Compra quien tiene sesión de cliente o quien verificó su correo como
+ * invitado (middleware `comprador`). Las pantallas posteriores a la compra
+ * existen dos veces en las rutas —con sesión y con enlace firmado— y aquí
+ * comparten método: lo único que cambia es cómo se autoriza el folio.
+ *
  * El controlador solo orquesta: valida, llama al servicio y responde. Cero
  * reglas de negocio aquí (§6).
  */
@@ -31,6 +37,7 @@ class CompraController extends Controller
         private readonly CotizarCompraService $cotizador,
         private readonly RegistrarCompraService $registrador,
         private readonly PasarelaPago $pasarela,
+        private readonly SesionInvitado $invitado,
     ) {
     }
 
@@ -49,6 +56,8 @@ class CompraController extends Controller
                 ? Rubro::vigentes($fecha)->with('tipoAcceso')->orderBy('tipo')->get()
                 : Rubro::vigentes()->with('tipoAcceso')->orderBy('tipo')->get(),
             'fechaElegida'    => $fecha,
+            // Solo para quien compra sin cuenta: a dónde llegarán los boletos.
+            'correoInvitado'  => Auth::guard('cliente')->check() ? null : $this->invitado->correo(),
             'meses'           => $this->rejillaDeMeses($abiertos),
             'hayDiasAbiertos' => $abiertos->isNotEmpty(),
             'paises'   => Pais::activos()->orderBy('nombre')->get(),
@@ -81,12 +90,14 @@ class CompraController extends Controller
         // Se vuelve a cotizar aquí: lo que el navegador vio es irrelevante.
         $cotizacion = $this->cotizador->cotizar($datos['renglones'], $datos['fecha_visita']);
 
+        // Con sesión manda la cuenta; sin ella, el correo que el invitado
+        // verificó (el middleware `comprador` garantiza que hay uno de los dos).
+        $cliente = Auth::guard('cliente')->user();
+
         try {
-            $compra = $this->registrador->registrar(
-                Auth::guard('cliente')->user(),
-                $cotizacion,
-                $datos['fecha_visita'],
-            );
+            $compra = $cliente
+                ? $this->registrador->registrar($cliente, $cotizacion, $datos['fecha_visita'])
+                : $this->registrador->registrarInvitado($this->invitado->correo(), $cotizacion, $datos['fecha_visita']);
         } catch (DiaNoDisponibleException $e) {
             return back()->withInput()->with('error', $e->getMessage());
         }
@@ -114,7 +125,7 @@ class CompraController extends Controller
      */
     public function retorno(string $folio)
     {
-        $compra = $this->compraDelCliente($folio);
+        $compra = $this->compraAutorizada($folio);
 
         return view('publico.retorno', ['compra' => $compra]);
     }
@@ -130,7 +141,7 @@ class CompraController extends Controller
 
     public function ver(string $folio)
     {
-        $compra = $this->compraDelCliente($folio);
+        $compra = $this->compraAutorizada($folio);
         $compra->load('detalle');
 
         return view('publico.compra', ['compra' => $compra]);
@@ -142,7 +153,7 @@ class CompraController extends Controller
      */
     public function qr(string $folio, QrImagenService $imagenes)
     {
-        $compra = $this->compraDelCliente($folio);
+        $compra = $this->compraAutorizada($folio);
 
         abort_unless($compra->estaPagada() && filled($compra->qr_token), 404);
 
@@ -155,14 +166,23 @@ class CompraController extends Controller
     // === Apoyo ===
 
     /**
-     * Solo compras del cliente autenticado: un folio ajeno responde 404, no
-     * 403, para no confirmar que ese folio existe.
+     * La compra que esta petición tiene derecho a ver. Un folio ajeno
+     * responde 404, no 403, para no confirmar que ese folio existe.
+     *
+     * - Rutas `invitado.*`: la firma del enlace ya se validó (middleware
+     *   `signed`) y solo abre compras hechas como invitado.
+     * - Rutas con sesión: solo las del cliente autenticado.
+     *
+     * Nunca se busca por `id_cliente` nulo: eso abriría las compras de todos
+     * los invitados a cualquiera que adivinara un folio consecutivo.
      */
-    private function compraDelCliente(string $folio): Compra
+    private function compraAutorizada(string $folio): Compra
     {
-        return Compra::where('folio', $folio)
-            ->where('id_cliente', Auth::guard('cliente')->id())
-            ->firstOrFail();
+        $compra = Compra::where('folio', $folio);
+
+        return request()->routeIs('invitado.*')
+            ? $compra->whereNotNull('correo_invitado')->firstOrFail()
+            : $compra->where('id_cliente', Auth::guard('cliente')->user()->id)->firstOrFail();
     }
 
     /**

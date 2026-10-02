@@ -98,13 +98,13 @@
     <table class="datos">
         <tr>
             <td class="etiqueta">Visitante</td>
-            <td>{{ $compra->cliente->nombreCompleto() }}</td>
+            <td>{{ $compra->nombreComprador() ?? 'Compra como invitado' }}</td>
             <td class="etiqueta">Fecha de compra</td>
             <td>{{ $compra->fecha_compra->translatedFormat('d/m/Y H:i') }}</td>
         </tr>
         <tr>
             <td class="etiqueta">Correo</td>
-            <td>{{ $compra->cliente->correo }}</td>
+            <td>{{ $compra->correoDestino() }}</td>
             <td class="etiqueta">Fecha de visita</td>
             <td><strong>{{ $compra->fecha_visita->translatedFormat('d/m/Y') }}</strong></td>
         </tr>

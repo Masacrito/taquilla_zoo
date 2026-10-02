@@ -18,11 +18,16 @@ class CompraAdminController extends Controller
 
         $compras = Compra::query()
             ->with('cliente')
-            ->when($busqueda !== '', function ($q) use ($busqueda) {
-                $termino = '%' . mb_strtoupper($busqueda) . '%';
-                $q->whereRaw('UPPER(folio) LIKE ?', [$termino])
-                    ->orWhereHas('cliente', fn ($c) => $c->whereRaw('LOWER(correo) LIKE ?', [mb_strtolower($busqueda) . '%']));
-            })
+            // Agrupado en su propio where: sin el paréntesis, los OR de la
+            // búsqueda se escapaban de los filtros de estado y fecha.
+            ->when($busqueda !== '', fn ($q) => $q->where(function ($q) use ($busqueda) {
+                $correo = mb_strtolower($busqueda) . '%';
+
+                $q->whereRaw('UPPER(folio) LIKE ?', ['%' . mb_strtoupper($busqueda) . '%'])
+                    ->orWhereHas('cliente', fn ($c) => $c->whereRaw('LOWER(correo) LIKE ?', [$correo]))
+                    // Quien compró sin cuenta solo existe aquí.
+                    ->orWhere('correo_invitado', 'LIKE', $correo);
+            }))
             ->when($request->filled('estado'), fn ($q) => $q->where('estado', $request->string('estado')))
             ->when($request->filled('desde'), fn ($q) => $q->whereDate('fecha_visita', '>=', $request->date('desde')))
             ->when($request->filled('hasta'), fn ($q) => $q->whereDate('fecha_visita', '<=', $request->date('hasta')))

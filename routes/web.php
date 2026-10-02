@@ -12,6 +12,7 @@ use App\Http\Controllers\CompraAdminController;
 use App\Http\Controllers\CompraController;
 use App\Http\Controllers\ErrorController;
 use App\Http\Controllers\GoogleAuthController;
+use App\Http\Controllers\InvitadoController;
 use App\Http\Controllers\MiCuentaController;
 use App\Http\Controllers\PagoSimuladoController;
 use App\Http\Controllers\PortalController;
@@ -58,15 +59,49 @@ Route::middleware('guard.exclusivo:cliente')->group(function () {
 
 Route::post('/salir', [ClienteAuthController::class, 'salir'])->name('portal.salir');
 
-// === COMPRA (requiere cliente autenticado) ===
+// === COMPRA COMO INVITADO: elegir cómo comprar y verificar el correo ===
+// El invitado da un correo, lo valida con un código y compra sin cuenta.
+// `guard.exclusivo:cliente` se conserva: una cuenta interna tampoco compra
+// como invitada (brief §3.2).
+Route::middleware('guard.exclusivo:cliente')->group(function () {
+    Route::get('/comprar/acceso', [InvitadoController::class, 'acceso'])->name('compras.acceso');
+
+    Route::post('/comprar/invitado', [InvitadoController::class, 'solicitar'])
+        ->middleware('throttle:5,10')
+        ->name('invitado.solicitar');
+
+    Route::get('/comprar/invitado/verificar',  [InvitadoController::class, 'mostrarVerificacion'])->name('invitado.verificar');
+    Route::post('/comprar/invitado/verificar', [InvitadoController::class, 'verificar'])
+        ->middleware('throttle:10,1');
+    Route::post('/comprar/invitado/reenviar',  [InvitadoController::class, 'reenviar'])
+        ->middleware('throttle:3,10')       // el mismo tope que el registro (§5.3)
+        ->name('invitado.reenviar');
+});
+
+// === COMPRA (cliente con sesión, o invitado con el correo verificado) ===
+// `guard.exclusivo` va PRIMERO a propósito: una cuenta interna debe recibir
+// el 403 que exige el brief §10.6, no un redirect.
+Route::middleware(['guard.exclusivo:cliente', 'comprador'])->group(function () {
+    Route::get('/comprar',         [CompraController::class, 'crear'])->name('compras.crear');
+    Route::post('/comprar/cotizar', [CompraController::class, 'cotizar'])->name('compras.cotizar');
+    Route::post('/comprar',        [CompraController::class, 'guardar'])->name('compras.guardar');
+});
+
+// === LO QUE EL INVITADO VE DESPUÉS DE COMPRAR ===
+// Sin sesión que lo identifique, lo autoriza la firma del enlace (el que
+// llega en su correo y al que lo devuelve el banco). El folio solo no basta:
+// es consecutivo.
+Route::middleware('signed')->prefix('compra/{folio}')->name('invitado.')->group(function () {
+    Route::get('/',        [CompraController::class, 'ver'])->name('ver');
+    Route::get('/qr',      [CompraController::class, 'qr'])->name('qr');
+    Route::get('/retorno', [CompraController::class, 'retorno'])->name('retorno');
+});
+
+// === COMPRAS DEL CLIENTE (requieren sesión) ===
 // `guard.exclusivo` va PRIMERO a propósito: si corriera después de `auth`,
 // una cuenta interna recibiría un redirect al login en vez del 403 que exige
 // el brief §10.6, porque `auth:cliente` cortaría antes.
 Route::middleware(['guard.exclusivo:cliente', 'auth:cliente'])->group(function () {
-    Route::get('/comprar',         [CompraController::class, 'crear'])->name('compras.crear');
-    Route::post('/comprar/cotizar', [CompraController::class, 'cotizar'])->name('compras.cotizar');
-    Route::post('/comprar',        [CompraController::class, 'guardar'])->name('compras.guardar');
-
     Route::get('/comprar/retorno/{folio}', [CompraController::class, 'retorno'])->name('compras.retorno');
 
     Route::get('/mis-compras',              [CompraController::class, 'index'])->name('compras.index');

@@ -206,10 +206,11 @@ class PortalCompraTest extends TestCase
 
     // ═══ Compra ═══
 
-    public function test_comprar_exige_sesion_de_cliente(): void
+    /** Sin cuenta ni correo verificado no se compra (ver CompraInvitadoTest). */
+    public function test_comprar_exige_sesion_de_cliente_o_correo_verificado(): void
     {
-        $this->get('/comprar')->assertRedirect();
-        $this->post('/comprar', $this->carrito())->assertRedirect();
+        $this->get('/comprar')->assertRedirect(route('compras.acceso'));
+        $this->post('/comprar', $this->carrito())->assertRedirect(route('compras.acceso'));
 
         $this->assertSame(0, Compra::count());
     }

@@ -1,7 +1,7 @@
 <x-mail::message>
 # Tu compra está confirmada
 
-Hola {{ $compra->cliente->nombre }}, tu pago se registró correctamente.
+{{ $compra->cliente ? 'Hola ' . $compra->cliente->nombre . ', tu' : 'Tu' }} pago se registró correctamente.
 
 **Folio:** {{ $compra->folio }}
 **Fecha de visita:** {{ $compra->fecha_visita->translatedFormat('l d \d\e F \d\e Y') }}
@@ -11,7 +11,7 @@ Hola {{ $compra->cliente->nombre }}, tu pago se registró correctamente.
 ## Tu código de acceso
 
 Presenta este código en el acceso del zoológico. También lo encuentras en el
-PDF adjunto y en tu cuenta.
+PDF adjunto y en el botón «Ver mi compra» de este correo.
 
 <div style="text-align:center; margin:24px 0;">
 <img src="{{ $message->embedData($qrPng, 'codigo-' . $compra->folio . '.png', 'image/png') }}"
@@ -29,7 +29,7 @@ PDF adjunto y en tu cuenta.
 @endforeach
 </x-mail::table>
 
-<x-mail::button :url="route('compras.ver', $compra->folio)">
+<x-mail::button :url="$compra->urlDetalle()">
 Ver mi compra
 </x-mail::button>
 

@@ -33,7 +33,37 @@ class RegistrarCompraService
         string $fechaVisita,
         ?string $observaciones = null,
     ): Compra {
-        return DB::transaction(function () use ($cliente, $cotizacion, $fechaVisita, $observaciones) {
+        return $this->crear($cliente->id, null, $cotizacion, $fechaVisita, $observaciones);
+    }
+
+    /**
+     * Compra sin cuenta: el comprador es un correo ya verificado con código.
+     *
+     * Si ese correo pertenece a una cuenta, la compra queda ligada a ella y
+     * le aparecerá en «Mis compras» cuando ingrese. Es legítimo porque el
+     * código probó que quien compra controla el buzón; lo que NO se hace es
+     * iniciarle sesión.
+     */
+    public function registrarInvitado(string $correo, Cotizacion $cotizacion, string $fechaVisita): Compra
+    {
+        $correo = mb_strtolower(trim($correo));
+
+        return $this->crear(
+            Cliente::where('correo', $correo)->value('id'),
+            $correo,
+            $cotizacion,
+            $fechaVisita,
+        );
+    }
+
+    private function crear(
+        ?string $idCliente,
+        ?string $correoInvitado,
+        Cotizacion $cotizacion,
+        string $fechaVisita,
+        ?string $observaciones = null,
+    ): Compra {
+        return DB::transaction(function () use ($idCliente, $correoInvitado, $cotizacion, $fechaVisita, $observaciones) {
 
             // Lo único que se valida de la fecha es que el día exista en el
             // calendario y no esté cerrado. Sin cupo que revisar no hay nada
@@ -46,7 +76,8 @@ class RegistrarCompraService
 
             $compra = Compra::create([
                 'folio'          => $this->siguienteFolio(),
-                'id_cliente'     => $cliente->id,
+                'id_cliente'      => $idCliente,
+                'correo_invitado' => $correoInvitado,
                 'fecha_compra'   => now(),
                 'fecha_visita'   => $fechaVisita,
                 'total_centavos' => $cotizacion->totalCentavos,

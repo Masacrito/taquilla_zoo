@@ -5,9 +5,11 @@
 @section('contenido')
     <div class="mx-auto max-w-2xl">
 
-        <a href="{{ route('compras.index') }}" class="mb-4 inline-block text-sm text-jade hover:underline">
-            ← Mis compras
-        </a>
+        @auth('cliente')
+            <a href="{{ route('compras.index') }}" class="mb-4 inline-block text-sm text-jade hover:underline">
+                ← Mis compras
+            </a>
+        @endauth
 
         {{-- ═══ QR ═══
              Es lo que el visitante abre parado en la puerta, con el sol de
@@ -18,7 +20,7 @@
                 <p class="titulo text-sm text-jade">Tu pase de entrada</p>
 
                 <div class="mx-auto my-5 w-fit rounded-card bg-white p-4">
-                    <img src="{{ route('compras.qr', $compra->folio) }}"
+                    <img src="{{ $compra->urlQr() }}"
                          alt="Código QR de la compra {{ $compra->folio }}"
                          class="h-64 w-64">
                 </div>

@@ -12,7 +12,7 @@
                     Tu compra <strong>{{ $compra->folio }}</strong> quedó pagada. Te enviamos el
                     comprobante con tu código QR por correo.
                 </p>
-                <a href="{{ route('compras.ver', $compra->folio) }}" class="btn-primary mt-5 w-full">
+                <a href="{{ $compra->urlDetalle() }}" class="btn-primary mt-5 w-full">
                     Ver mi código QR
                 </a>
             </div>
@@ -30,7 +30,7 @@
                     No cierres esta página ni vuelvas a pagar. Si pasan más de 15 minutos sin
                     confirmarse, la compra expira y tendrás que hacerla de nuevo.
                 </p>
-                <a href="{{ route('compras.retorno', $compra->folio) }}" class="btn-outline mt-5 w-full">
+                <a href="{{ $compra->urlRetorno() }}" class="btn-outline mt-5 w-full">
                     Actualizar
                 </a>
             </div>
@@ -49,8 +49,11 @@
             </div>
         @endif
 
-        <a href="{{ route('compras.index') }}" class="mt-4 inline-block text-sm text-jade hover:underline">
-            Ver todas mis compras
-        </a>
+        {{-- «Mis compras» solo existe para quien tiene cuenta. --}}
+        @auth('cliente')
+            <a href="{{ route('compras.index') }}" class="mt-4 inline-block text-sm text-jade hover:underline">
+                Ver todas mis compras
+            </a>
+        @endauth
     </div>
 @endsection

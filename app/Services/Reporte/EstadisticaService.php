@@ -56,7 +56,8 @@ class EstadisticaService
             ->selectRaw('COALESCE(SUM(compra_detalle.cant_hombre), 0) AS hombres')
             ->selectRaw('COALESCE(SUM(compra_detalle.cant_mujer), 0) AS mujeres')
             ->selectRaw('COUNT(DISTINCT compras.id) AS compras')
-            ->selectRaw('COUNT(DISTINCT compras.id_cliente) AS clientes')
+            // Quien compró sin cuenta no tiene id_cliente: cuenta por su correo.
+            ->selectRaw('COUNT(DISTINCT COALESCE(CAST(compras.id_cliente AS TEXT), compras.correo_invitado)) AS clientes')
             ->first();
 
         return [

@@ -16,10 +16,14 @@ class VerificacionCorreo extends Model
     public const MAX_REENVIOS     = 3;
     public const MAX_INTENTOS     = 5;
 
+    /** Para qué se pidió el código. Uno no vale para lo otro. */
+    public const REGISTRO = 'registro';
+    public const INVITADO = 'invitado';
+
     protected $table = 'verificaciones_correo';
     public $timestamps = false;
 
-    protected $fillable = ['correo', 'codigo_hash', 'intentos', 'expira_en', 'consumido_en', 'created_at'];
+    protected $fillable = ['correo', 'codigo_hash', 'proposito', 'intentos', 'expira_en', 'consumido_en', 'created_at'];
 
     protected $hidden = ['codigo_hash'];
 

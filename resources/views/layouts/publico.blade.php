@@ -90,7 +90,8 @@
                         Comprar boletos
                     </a>
                 @else
-                    <a href="{{ route('portal.registro') }}" class="btn-primary shrink-0 px-4 sm:px-6">
+                    {{-- Sin sesión, /comprar lleva a elegir: con cuenta o como invitado. --}}
+                    <a href="{{ route('compras.crear') }}" class="btn-primary shrink-0 px-4 sm:px-6">
                         Comprar boletos
                     </a>
                 @endauth

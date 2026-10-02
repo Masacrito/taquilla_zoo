@@ -17,6 +17,11 @@ return new class extends Migration {
             $table->id();
             $table->string('correo', 160)->index();
             $table->string('codigo_hash');
+
+            // Agregado 2026-10-02 (compra como invitado). Para qué se emitió:
+            // 'registro' o 'invitado'. Un código pedido para comprar sin
+            // cuenta no debe servir para entrar a la cuenta de ese correo.
+            $table->string('proposito', 20)->default('registro');
             $table->unsignedTinyInteger('intentos')->default(0);
             $table->timestampTz('expira_en');
             $table->timestampTz('consumido_en')->nullable();

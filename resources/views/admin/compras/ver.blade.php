@@ -1,7 +1,7 @@
 @extends('layouts.interno')
 
 @section('titulo', 'Compra ' . $compra->folio)
-@section('subtitulo', $compra->cliente->nombreCompleto())
+@section('subtitulo', $compra->nombreComprador() ?? 'Compra como invitado')
 
 @section('contenido')
 
@@ -38,8 +38,15 @@
                 <div>
                     <dt class="text-xs text-texto-suave">Visitante</dt>
                     <dd>
-                        <a href="{{ route('admin.clientes.ver', $compra->cliente) }}"
-                           class="text-jade hover:underline">{{ $compra->cliente->correo }}</a>
+                        @if ($compra->cliente)
+                            <a href="{{ route('admin.clientes.ver', $compra->cliente) }}"
+                               class="text-jade hover:underline">{{ $compra->correoDestino() }}</a>
+                        @else
+                            {{ $compra->correoDestino() }}
+                        @endif
+                        @if ($compra->esDeInvitado())
+                            <span class="badge-especial ml-1">compró como invitado</span>
+                        @endif
                     </dd>
                 </div>
             </dl>

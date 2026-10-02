@@ -23,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission'      => \App\Http\Middleware\EnsurePermission::class,
             'account.status'  => \App\Http\Middleware\CheckAccountStatus::class,
             'guard.exclusivo' => \App\Http\Middleware\EnsureGuardExclusivo::class,
+            'comprador'       => \App\Http\Middleware\EnsureComprador::class,
         ]);
 
         // `account.status` NO va en el grupo `web` global: eso lo aplicaría

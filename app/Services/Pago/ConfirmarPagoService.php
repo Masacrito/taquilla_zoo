@@ -143,7 +143,7 @@ class ConfirmarPagoService
                 // afterCommit() evita encolarlo si la transacción se revierte:
                 // sin eso, el worker podría tomar el job antes del COMMIT y no
                 // encontrar la compra.
-                Mail::to($fresca->cliente->correo)
+                Mail::to($fresca->correoDestino())
                     ->queue((new ComprobanteCompra($fresca))->afterCommit());
             });
         } catch (UniqueConstraintViolationException) {

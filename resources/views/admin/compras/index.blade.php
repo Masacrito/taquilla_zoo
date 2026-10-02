@@ -52,8 +52,13 @@
                         <tr class="border-b border-borde transition-colors last:border-0 hover:bg-jade/4">
                             <td class="px-4 py-2.5 font-medium">{{ $compra->folio }}</td>
                             <td class="px-4 py-2.5">
-                                <p>{{ $compra->cliente->nombreCompleto() }}</p>
-                                <p class="text-xs text-texto-suave">{{ $compra->cliente->correo }}</p>
+                                <p>
+                                    {{ $compra->nombreComprador() ?? 'Sin cuenta' }}
+                                    @if ($compra->esDeInvitado())
+                                        <span class="badge-especial ml-1">invitado</span>
+                                    @endif
+                                </p>
+                                <p class="text-xs text-texto-suave">{{ $compra->correoDestino() }}</p>
                             </td>
                             <td class="px-4 py-2.5">{{ $compra->fecha_visita->translatedFormat('d/m/Y') }}</td>
                             <td class="px-4 py-2.5 text-center tabular-nums">

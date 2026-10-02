@@ -76,6 +76,7 @@ class PagoSimuladoController extends Controller
 
         $this->confirmar->confirmar($notificacion, PasarelaSimulada::PROVEEDOR);
 
-        return redirect()->route('compras.retorno', ['folio' => $pago->compra->folio]);
+        // Con cuenta o como invitado: la compra sabe cuál es su pantalla.
+        return redirect()->to($pago->compra->urlRetorno());
     }
 }

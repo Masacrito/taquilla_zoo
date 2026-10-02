@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\URL;
 
 /**
  * Compra de boletos (brief §5.4).
@@ -47,7 +48,7 @@ class Compra extends Model
     protected $table = 'compras';
 
     protected $fillable = [
-        'folio', 'id_cliente', 'fecha_compra', 'fecha_visita', 'total_centavos',
+        'folio', 'id_cliente', 'correo_invitado', 'fecha_compra', 'fecha_visita', 'total_centavos',
         'pases_total', 'pases_usados', 'estado', 'qr_token', 'qr_expira_en',
         'id_promocion', 'observaciones',
     ];
@@ -77,6 +78,58 @@ class Compra extends Model
     public function pagos()
     {
         return $this->hasMany(Pago::class, 'id_compra');
+    }
+
+    // ═══ Quién compró ═══
+    //
+    // Una compra hecha como invitado no tiene sesión detrás: se identifica
+    // por el correo que la persona verificó, y se consulta con un enlace
+    // firmado en vez de «Mis compras». Si ese correo ya tenía cuenta, además
+    // queda ligada a ella (`id_cliente`), pero sigue siendo de invitado.
+
+    public function esDeInvitado(): bool
+    {
+        return $this->correo_invitado !== null;
+    }
+
+    /** A dónde se mandan los boletos. */
+    public function correoDestino(): string
+    {
+        return $this->correo_invitado ?? $this->cliente->correo;
+    }
+
+    /** El nombre de quien compró, si se conoce: al invitado no se le pide. */
+    public function nombreComprador(): ?string
+    {
+        return $this->cliente?->nombreCompleto();
+    }
+
+    /**
+     * Las tres pantallas del comprador sobre su compra. Con cuenta van por
+     * las rutas con sesión; como invitado, por su equivalente firmado: la
+     * firma es lo que prueba que el enlace salió del sistema, porque el
+     * folio es consecutivo y se adivina.
+     */
+    public function urlDetalle(): string
+    {
+        return $this->urlDelComprador('ver');
+    }
+
+    public function urlQr(): string
+    {
+        return $this->urlDelComprador('qr');
+    }
+
+    public function urlRetorno(): string
+    {
+        return $this->urlDelComprador('retorno');
+    }
+
+    private function urlDelComprador(string $pantalla): string
+    {
+        return $this->esDeInvitado()
+            ? URL::signedRoute("invitado.{$pantalla}", ['folio' => $this->folio])
+            : route("compras.{$pantalla}", ['folio' => $this->folio]);
     }
 
     public function puedeTransicionarA(string $estado): bool

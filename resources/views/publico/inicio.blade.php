@@ -85,7 +85,8 @@
                     <a href="{{ route('compras.crear') }}" class="btn-nota-primario">Comprar boletos</a>
                     <a href="{{ route('compras.index') }}" class="btn-nota-contorno">Mis compras</a>
                 @else
-                    <a href="{{ route('portal.registro') }}" class="btn-nota-primario">Comprar boletos</a>
+                    {{-- Sin sesión, /comprar lleva a elegir: con cuenta o como invitado. --}}
+                    <a href="{{ route('compras.crear') }}" class="btn-nota-primario">Comprar boletos</a>
                     <a href="{{ route('portal.ingresar') }}" class="btn-nota-contorno">Ya tengo cuenta</a>
                 @endauth
             </div>
@@ -422,7 +423,7 @@
                 @auth('cliente')
                     <a href="{{ route('compras.crear') }}" class="btn-nota-primario">Comprar boletos</a>
                 @else
-                    <a href="{{ route('portal.registro') }}" class="btn-nota-primario">Comprar boletos</a>
+                    <a href="{{ route('compras.crear') }}" class="btn-nota-primario">Comprar boletos</a>
                 @endauth
             </div>
         </div>
