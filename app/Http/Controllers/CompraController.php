@@ -172,19 +172,55 @@ class CompraController extends Controller
      */
     private function validarCarrito(Request $request): array
     {
+        $this->normalizarCantidades($request);
+
+        $tope = (int) config('taquilla.compra.max_por_campo');
+
         return $request->validate([
             'fecha_visita'                => ['required', 'date', 'after_or_equal:today'],
             'renglones'                   => ['required', 'array', 'min:1'],
             'renglones.*.id_rubro'        => ['required', 'exists:rubros,id'],
-            'renglones.*.cant_hombre'     => ['nullable', 'integer', 'min:0', 'max:100'],
-            'renglones.*.cant_mujer'      => ['nullable', 'integer', 'min:0', 'max:100'],
+            'renglones.*.cant_hombre'     => ['nullable', 'integer', 'min:0', "max:{$tope}"],
+            'renglones.*.cant_mujer'      => ['nullable', 'integer', 'min:0', "max:{$tope}"],
             'renglones.*.id_pais'         => ['nullable', 'exists:paises,id'],
             'renglones.*.id_estado'       => ['nullable', 'exists:estados,id'],
             'renglones.*.id_municipio'    => ['nullable', 'exists:municipios,id'],
-        ], [], [
-            'fecha_visita' => 'fecha de visita',
-            'renglones'    => 'boletos',
+        ], [
+            'fecha_visita.required' => 'Elige en el calendario el día de tu visita.',
+        ], [
+            'fecha_visita'            => 'fecha de visita',
+            'renglones'               => 'boletos',
+            'renglones.*.cant_hombre' => 'cantidad de hombres',
+            'renglones.*.cant_mujer'  => 'cantidad de mujeres',
         ]);
+    }
+
+    /**
+     * «03» es un 3. Un campo numérico del navegador conserva el cero inicial
+     * cuando se teclea junto al 0 que ya estaba, y la regla `integer` de
+     * Laravel lo rechaza: la persona veía «debe ser un número entero» después
+     * de haber escrito un número entero. Solo se tocan cadenas de puros
+     * dígitos; cualquier otra cosa llega intacta a la validación.
+     */
+    private function normalizarCantidades(Request $request): void
+    {
+        $renglones = $request->input('renglones');
+
+        if (! is_array($renglones)) {
+            return;
+        }
+
+        foreach ($renglones as $i => $renglon) {
+            foreach (['cant_hombre', 'cant_mujer'] as $campo) {
+                $valor = is_array($renglon) ? ($renglon[$campo] ?? null) : null;
+
+                if (is_string($valor) && ctype_digit($valor)) {
+                    $renglones[$i][$campo] = (int) $valor;
+                }
+            }
+        }
+
+        $request->merge(['renglones' => $renglones]);
     }
 
     /**

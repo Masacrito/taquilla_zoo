@@ -43,6 +43,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Compra
+    |--------------------------------------------------------------------------
+    |
+    | Tope de personas por campo (hombres o mujeres) en cada tarifa. No es
+    | aforo —el zoológico no lo maneja (brief §5.6)—: es un freno contra el
+    | dedazo y contra carritos absurdos. Lo leen la validación del servidor y
+    | el selector de cantidad de la pantalla, para que no se contradigan.
+    |
+    */
+
+    'compra' => [
+        'max_por_campo' => 100,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Pasarela de pago
     |--------------------------------------------------------------------------
     |

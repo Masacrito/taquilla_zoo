@@ -92,12 +92,23 @@
 
                 <p class="mt-3 text-sm" data-fecha-elegida></p>
 
+                {{-- El aviso va junto al calendario, no solo arriba de la página:
+                     quien llega hasta el botón de pago ya no ve el encabezado. --}}
+                <p class="mt-2 text-sm font-medium text-cinabrio" data-falta="fecha" role="alert"
+                   @unless ($errors->has('fecha_visita')) hidden @endunless>
+                    {{ $errors->first('fecha_visita') ?: 'Elige en el calendario el día de tu visita.' }}
+                </p>
+
                 <p class="mt-2 text-xs text-texto-suave">
                     Martes a domingo, 8:30 a 16:00 hrs. Lunes cerrado.
                 </p>
             </div>
 
             <p class="titulo mb-3 text-xs text-texto-suave">¿Cuántas personas van?</p>
+
+            <p class="mb-3 text-sm font-medium text-cinabrio" data-falta="personas" role="alert" hidden>
+                Indica al menos una persona en alguna tarifa.
+            </p>
 
             <div class="grid gap-3">
                 @foreach ($rubros as $i => $rubro)
@@ -116,39 +127,35 @@
                                 </p>
                             </div>
 
+                            {{-- old(): si el servidor devuelve el formulario con un
+                                 error, lo capturado no se pierde. --}}
                             <div class="flex gap-3">
-                                <div class="w-24">
-                                    <label class="label">Hombres</label>
-                                    <input type="number" min="0" max="100" value="0" class="input text-center"
-                                           name="renglones[{{ $i }}][cant_hombre]" data-cantidad>
-                                </div>
-                                <div class="w-24">
-                                    <label class="label">Mujeres</label>
-                                    <input type="number" min="0" max="100" value="0" class="input text-center"
-                                           name="renglones[{{ $i }}][cant_mujer]" data-cantidad>
-                                </div>
+                                <x-cantidad nombre="renglones[{{ $i }}][cant_hombre]" etiqueta="Hombres"
+                                            :valor="old('renglones.' . $i . '.cant_hombre', 0)" />
+                                <x-cantidad nombre="renglones[{{ $i }}][cant_mujer]" etiqueta="Mujeres"
+                                            :valor="old('renglones.' . $i . '.cant_mujer', 0)" />
                             </div>
                         </div>
 
-                        <details class="mt-3">
+                        <details class="mt-3" @if (old('renglones.' . $i . '.id_pais') || old('renglones.' . $i . '.id_estado')) open @endif>
                             <summary class="cursor-pointer text-xs text-jade">Procedencia (opcional)</summary>
                             <div class="mt-3 grid gap-3 sm:grid-cols-3">
                                 <select name="renglones[{{ $i }}][id_pais]" class="input text-xs">
                                     <option value="">País</option>
                                     @foreach ($paises as $p)
-                                        <option value="{{ $p->id }}">{{ $p->nombre }}</option>
+                                        <option value="{{ $p->id }}" @selected(old('renglones.' . $i . '.id_pais') == $p->id)>{{ $p->nombre }}</option>
                                     @endforeach
                                 </select>
                                 <select name="renglones[{{ $i }}][id_estado]" class="input text-xs">
                                     <option value="">Estado</option>
                                     @foreach ($estados as $e)
-                                        <option value="{{ $e->id }}">{{ $e->nombre }}</option>
+                                        <option value="{{ $e->id }}" @selected(old('renglones.' . $i . '.id_estado') == $e->id)>{{ $e->nombre }}</option>
                                     @endforeach
                                 </select>
                                 <select name="renglones[{{ $i }}][id_municipio]" class="input text-xs">
                                     <option value="">Municipio</option>
                                     @foreach ($municipios as $m)
-                                        <option value="{{ $m->id }}" data-estado="{{ $m->id_estado }}">{{ $m->nombre }}</option>
+                                        <option value="{{ $m->id }}" data-estado="{{ $m->id_estado }}" @selected(old('renglones.' . $i . '.id_municipio') == $m->id)>{{ $m->nombre }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -235,6 +242,7 @@
 
                     const elegir = (fecha) => {
                         campo.value = fecha;
+                        if (fecha) caja.querySelector('[data-falta="fecha"]').hidden = true;
 
                         caja.querySelectorAll('[data-dia]').forEach((b) => {
                             b.toggleAttribute('data-elegido', b.dataset.dia === fecha);
@@ -289,7 +297,76 @@
                     salidaPases.textContent = pases;
                 };
 
-                form.addEventListener('input', recalcular);
+                // ── Cantidades ─────────────────────────────────────────────
+                // Todo delegado en el formulario: un solo juego de listeners
+                // para todos los selectores, sin importar cuántas tarifas haya.
+                const esCantidad = (el) => el instanceof HTMLInputElement && el.matches('[data-cantidad]');
+                const avisoPersonas = form.querySelector('[data-falta="personas"]');
+
+                // Deja en el campo un entero dentro de sus límites. Vacío o
+                // basura cuentan como 0.
+                const fijar = (campo, n) => {
+                    const limpio = Math.min(Math.max(parseInt(n, 10) || 0, 0), parseInt(campo.max, 10));
+                    if (campo.value !== String(limpio)) campo.value = limpio;
+                    return limpio;
+                };
+
+                const mover = (campo, paso) => {
+                    fijar(campo, (parseInt(campo.value, 10) || 0) + paso);
+                    campo.dispatchEvent(new Event('input', { bubbles: true }));
+                };
+
+                // Al entrar se selecciona el contenido: lo que se teclee
+                // reemplaza al 0 en vez de quedar pegado a él («03»).
+                form.addEventListener('focusin', (e) => { if (esCantidad(e.target)) e.target.select(); });
+
+                // Al salir, el campo queda normalizado aunque se haya dejado vacío.
+                form.addEventListener('focusout', (e) => {
+                    if (esCantidad(e.target)) { fijar(e.target, e.target.value); recalcular(); }
+                });
+
+                form.addEventListener('input', (e) => {
+                    // Mientras se teclea solo se quitan ceros a la izquierda y
+                    // se respeta el tope; el vacío se deja para poder borrar.
+                    if (esCantidad(e.target) && e.target.value !== '') fijar(e.target, e.target.value);
+                    avisoPersonas.hidden = true;
+                    recalcular();
+                });
+
+                form.addEventListener('click', (e) => {
+                    const boton = e.target.closest('[data-paso]');
+                    if (!boton) return;
+                    mover(boton.closest('[data-selector-cantidad]').querySelector('[data-cantidad]'),
+                          parseInt(boton.dataset.paso, 10));
+                });
+
+                // La rueda solo cuenta con el campo enfocado: si contara al
+                // pasar el cursor, desplazar la página cambiaría boletos sin
+                // querer. Las flechas ↑↓ las resuelve el navegador.
+                form.addEventListener('wheel', (e) => {
+                    if (!esCantidad(e.target) || document.activeElement !== e.target) return;
+                    e.preventDefault();
+                    mover(e.target, e.deltaY < 0 ? 1 : -1);
+                }, { passive: false });
+
+                // ── Antes de enviar ────────────────────────────────────────
+                // El servidor valida de todos modos; esto solo evita el viaje
+                // y señala qué falta justo donde falta.
+                form.addEventListener('submit', (e) => {
+                    const avisoFecha = form.querySelector('[data-falta="fecha"]');
+                    const sinFecha = !form.querySelector('[data-fecha-visita]').value;
+                    const sinPersonas = Array.from(form.querySelectorAll('[data-cantidad]'))
+                        .map((campo) => fijar(campo, campo.value))
+                        .every((n) => n === 0);
+
+                    avisoFecha.hidden = !sinFecha;
+                    avisoPersonas.hidden = !sinPersonas;
+
+                    if (sinFecha || sinPersonas) {
+                        e.preventDefault();
+                        (sinFecha ? avisoFecha : avisoPersonas).scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                });
 
                 // Filtra municipios según el estado elegido en el mismo renglón.
                 form.querySelectorAll('select[name*="[id_estado]"]').forEach((selEstado) => {

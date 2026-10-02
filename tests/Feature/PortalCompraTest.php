@@ -261,6 +261,43 @@ class PortalCompraTest extends TestCase
             ->assertJson(['total_centavos' => 8000, 'pases' => 2]);
     }
 
+    /**
+     * El campo numérico arranca en 0 y, si se teclea junto a él, manda «03».
+     * La regla `integer` lo rechazaba y la compra no pasaba.
+     */
+    public function test_una_cantidad_con_cero_a_la_izquierda_se_acepta(): void
+    {
+        $carrito = $this->carrito();
+        $carrito['renglones'][0]['cant_hombre'] = '03';
+        $carrito['renglones'][0]['cant_mujer']  = '0';
+
+        $this->actingAs($this->clienteVerificado(), 'cliente')
+            ->post('/comprar', $carrito)
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(3, Compra::firstOrFail()->pases_total);
+    }
+
+    /** Un error del servidor no debe borrar lo que la persona ya capturó. */
+    public function test_si_falta_la_fecha_las_cantidades_no_se_pierden(): void
+    {
+        $carrito = $this->carrito(4, 2);
+        unset($carrito['fecha_visita']);
+
+        $this->actingAs($this->clienteVerificado(), 'cliente')
+            ->from('/comprar')
+            ->post('/comprar', $carrito)
+            ->assertRedirect('/comprar')
+            ->assertSessionHasErrors('fecha_visita');
+
+        $this->get('/comprar')
+            ->assertSee('name="renglones[0][cant_hombre]" value="4"', false)
+            ->assertSee('name="renglones[0][cant_mujer]" value="2"', false)
+            ->assertSee('Elige en el calendario el día de tu visita.');
+
+        $this->assertSame(0, Compra::count());
+    }
+
     public function test_una_compra_completa_queda_pendiente_de_pago(): void
     {
         $this->actingAs($this->clienteVerificado(), 'cliente')
