@@ -21,6 +21,13 @@ class Cuenta extends Authenticatable
 
     protected $hidden = ['password', 'remember_token'];
 
+    protected $casts = [
+        'password_cambiado_en' => 'datetime',
+    ];
+
+    /** El rol Administrador que siembra AuthSeeder. */
+    public const ROL_ADMINISTRADOR = 1;
+
     public function usuario()
     {
         return $this->belongsTo(Usuario::class, 'id_usuario');
@@ -52,6 +59,45 @@ class Cuenta extends Authenticatable
         return static::with('usuario')
             ->where('id_usuario', self::SUPER_ADMIN_ID)
             ->first();
+    }
+
+    /**
+     * ¿Esta cuenta puede editar, desactivar o eliminar a la otra?
+     *
+     * Es la única definición de la jerarquía: la usa el controlador para
+     * rechazar y la vista para no ofrecer lo que se va a rechazar. Antes la
+     * regla vivía solo en el controlador y la pantalla pintaba los botones
+     * igual, así que el «no puedes» llegaba después de enviar el formulario.
+     *
+     * - Nadie se administra a sí mismo desde la gestión de usuarios (para eso
+     *   está «Mi cuenta»).
+     * - Al Super Admin no lo toca nadie.
+     * - A un Administrador solo lo toca el Super Admin.
+     */
+    public function puedeAdministrarA(self $objetivo): bool
+    {
+        if ((int) $objetivo->id_cuenta === (int) $this->id_cuenta) {
+            return false;
+        }
+
+        if ($objetivo->esSuperAdmin()) {
+            return false;
+        }
+
+        if ((int) $objetivo->id_rol === self::ROL_ADMINISTRADOR) {
+            return $this->esSuperAdmin();
+        }
+
+        return true;
+    }
+
+    /**
+     * El rol Administrador es terreno del Super Admin: solo él lo otorga y
+     * solo él edita sus permisos.
+     */
+    public function puedeGestionarRol(int $idRol): bool
+    {
+        return $idRol !== self::ROL_ADMINISTRADOR || $this->esSuperAdmin();
     }
 
     public function isAdmin(): bool

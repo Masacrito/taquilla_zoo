@@ -30,7 +30,13 @@ class AdminController extends Controller
         $roles    = Rol::orderBy('nombre')->get();
         $permisos = Permiso::orderBy('nombre')->get();
 
-        return view('admin.users.index', compact('cuentas', 'roles', 'permisos'));
+        // Los roles que esta cuenta puede otorgar: el selector no ofrece lo
+        // que el servidor va a rechazar.
+        $rolesAsignables = $roles->filter(
+            fn (Rol $rol) => Auth::user()->puedeGestionarRol((int) $rol->id_rol)
+        );
+
+        return view('admin.users.index', compact('cuentas', 'rolesAsignables', 'permisos'));
     }
 
     public function storeUser(Request $request)
@@ -52,7 +58,7 @@ class AdminController extends Controller
         ]);
 
         // Solo Super Admin puede crear Administradores
-        if ((int) $request->id_rol === 1 && !$this->esSuperAdmin()) {
+        if (! Auth::user()->puedeGestionarRol((int) $request->id_rol)) {
             return back()->with('error', 'Solo el Super Administrador puede crear cuentas con rol Administrador.');
         }
 
@@ -127,7 +133,7 @@ class AdminController extends Controller
         $request->validate(['id_rol' => 'required|exists:roles,id_rol']);
 
         // Solo Super Admin puede asignar el rol Administrador
-        if ((int) $request->id_rol === 1 && !$this->esSuperAdmin()) {
+        if (! Auth::user()->puedeGestionarRol((int) $request->id_rol)) {
             return back()->with('error', 'Solo el Super Administrador puede asignar el rol Administrador.');
         }
 
@@ -150,7 +156,7 @@ class AdminController extends Controller
         $cuenta = Cuenta::findOrFail($id);
 
         // Solo Super Admin puede modificar permisos del rol Administrador
-        if ((int) $cuenta->id_rol === 1 && !$this->esSuperAdmin()) {
+        if (! Auth::user()->puedeGestionarRol((int) $cuenta->id_rol)) {
             return back()->with('error', 'Solo el Super Administrador puede editar los permisos del rol Administrador.');
         }
 
@@ -234,13 +240,6 @@ class AdminController extends Controller
 
     // === Guards ===
 
-    // Quién es el Super Admin lo define Cuenta, no este controlador: la
-    // notificación de fallos del sistema necesita la misma respuesta.
-    private function esSuperAdmin(): bool
-    {
-        return Auth::user()->esSuperAdmin();
-    }
-
     private function guardSelf(Cuenta $cuenta, string $msg): void
     {
         if ((int) $cuenta->id_cuenta === (int) Auth::user()->id_cuenta) {
@@ -248,10 +247,12 @@ class AdminController extends Controller
         }
     }
 
+    // La jerarquía la define Cuenta::puedeAdministrarA, la misma regla con la
+    // que la vista decide qué controles pintar. Se llama después de
+    // guardSelf, así que aquí solo llegan cuentas ajenas.
     private function guardSuperAdminTarget(Cuenta $cuenta): void
     {
-        // Si el objetivo es otro Administrador (id_rol = 1) y yo NO soy Super Admin → bloquear
-        if ((int) $cuenta->id_rol === 1 && !$this->esSuperAdmin()) {
+        if (! Auth::user()->puedeAdministrarA($cuenta)) {
             abort(redirect()->back()->with('error', 'Solo el Super Administrador puede modificar a otros Administradores.'));
         }
     }

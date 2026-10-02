@@ -53,6 +53,10 @@ class TableroTest extends TestCase
         // pruebas que no van de eso.
         Usuario::where('id_usuario', Cuenta::SUPER_ADMIN_ID)
             ->update(['email' => 'super@semahn.chiapas.gob.mx']);
+
+        // Y con la contraseña ya cambiada, por lo mismo.
+        Cuenta::where('id_usuario', Cuenta::SUPER_ADMIN_ID)
+            ->update(['password_cambiado_en' => now()]);
     }
 
     private function admin(): Cuenta

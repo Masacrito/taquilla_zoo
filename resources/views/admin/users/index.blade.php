@@ -29,7 +29,7 @@
                     <label class="label">Rol</label>
                     <select name="id_rol" class="input" required>
                         <option value="">— Seleccionar —</option>
-                        @foreach ($roles as $rol)
+                        @foreach ($rolesAsignables as $rol)
                             <option value="{{ $rol->id_rol }}" @selected(old('id_rol') == $rol->id_rol)>{{ $rol->nombre }}</option>
                         @endforeach
                     </select>
@@ -65,7 +65,12 @@
                 </thead>
                 <tbody>
                     @foreach ($cuentas as $cuenta)
-                        @php $esYo = $cuenta->id_cuenta === auth()->user()->id_cuenta; @endphp
+                        {{-- La misma regla que aplica el controlador: lo que se va a
+                             rechazar no se ofrece. --}}
+                        @php
+                            $esYo          = $cuenta->id_cuenta === auth()->user()->id_cuenta;
+                            $administrable = auth()->user()->puedeAdministrarA($cuenta);
+                        @endphp
                         <tr class="border-b border-borde align-top transition-colors last:border-0 hover:bg-jade/4">
                             <td class="px-4 py-3 text-texto-suave">{{ $cuenta->id_cuenta }}</td>
                             <td class="px-4 py-3">
@@ -76,12 +81,12 @@
                             </td>
                             <td class="px-4 py-3 text-texto-suave">{{ $cuenta->username }}</td>
                             <td class="px-4 py-3">
-                                @if (! $esYo && auth()->user()->puedeCambiarRoles())
+                                @if ($administrable && auth()->user()->puedeCambiarRoles())
                                     <form method="POST" action="{{ route('admin.users.update-role', $cuenta->id_cuenta) }}">
                                         @csrf @method('PUT')
                                         <select name="id_rol" onchange="this.form.submit()"
                                                 class="input px-2 py-1 text-xs">
-                                            @foreach ($roles as $rol)
+                                            @foreach ($rolesAsignables as $rol)
                                                 <option value="{{ $rol->id_rol }}" @selected($rol->id_rol === $cuenta->id_rol)>{{ $rol->nombre }}</option>
                                             @endforeach
                                         </select>
@@ -96,7 +101,13 @@
                             </td>
                             <td class="px-4 py-3">
                                 @if ($esYo)
-                                    <span class="text-xs text-texto-suave italic">(tu cuenta)</span>
+                                    <a href="{{ route('cuenta.editar') }}" class="text-xs text-jade underline-offset-2 hover:underline">
+                                        Tu cuenta · editar en «Mi cuenta»
+                                    </a>
+                                @elseif (! $administrable)
+                                    <span class="text-xs text-texto-suave" title="Solo el Super Administrador puede modificar esta cuenta">
+                                        Cuenta protegida · solo el Super Administrador
+                                    </span>
                                 @else
                                     <div class="flex flex-wrap gap-2">
                                         @if (auth()->user()->puedeActivarCuentas())
@@ -117,7 +128,7 @@
                                     </div>
                                 @endif
 
-                                @if (auth()->user()->puedeEditarUsuarios() && ! $esYo)
+                                @if (auth()->user()->puedeEditarUsuarios() && $administrable)
                                     <details class="mt-2">
                                         <summary class="cursor-pointer text-xs text-jade">Editar datos</summary>
                                         <form method="POST" action="{{ route('admin.users.update', $cuenta->id_cuenta) }}"
@@ -136,7 +147,7 @@
                                     </details>
                                 @endif
 
-                                @if (auth()->user()->puedeGestionarPermisos())
+                                @if (auth()->user()->puedeGestionarPermisos() && auth()->user()->puedeGestionarRol((int) $cuenta->id_rol))
                                     <details class="mt-2">
                                         <summary class="cursor-pointer text-xs text-jade">
                                             Permisos del rol «{{ $cuenta->rol->nombre }}»

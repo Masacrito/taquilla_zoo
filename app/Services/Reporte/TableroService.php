@@ -138,13 +138,25 @@ class TableroService
         }
 
         // ── Los avisos de fallo no le llegan a nadie ──
-        $correoSuper = Cuenta::superAdmin()?->usuario?->email;
+        // Ambos avisos llevan a «Mi cuenta»: solo el propio Super Admin puede
+        // cambiar su correo y su contraseña.
+        $super       = Cuenta::superAdmin();
+        $correoSuper = $super?->usuario?->email;
 
         if (blank($correoSuper) || str_ends_with((string) $correoSuper, '@example.com')) {
             $avisos[] = [
                 'tipo'  => 'atencion',
                 'texto' => 'El Super Admin no tiene un correo real: los avisos de fallos del sistema no llegan a nadie.',
-                'ruta'  => route('admin.users.index'),
+                'ruta'  => route('cuenta.editar'),
+            ];
+        }
+
+        // ── La contraseña con la que se instaló el sistema sigue viva ──
+        if ($super !== null && $super->password_cambiado_en === null) {
+            $avisos[] = [
+                'tipo'  => 'atencion',
+                'texto' => 'El Super Admin sigue con la contraseña inicial. Debe cambiarla desde «Mi cuenta».',
+                'ruta'  => route('cuenta.editar'),
             ];
         }
 

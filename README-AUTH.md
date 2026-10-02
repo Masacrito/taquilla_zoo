@@ -23,7 +23,9 @@ Acceder en `http://127.0.0.1:8000` con:
 |----------|----------|---------------|
 | admin    | admin123 | Administrador |
 
-> ⚠️ Cambia esta contraseña inmediatamente desde el panel admin → Gestionar usuarios → Editar datos.
+> ⚠️ Cambia esta contraseña inmediatamente desde el panel → **Mi cuenta** (`/panel/mi-cuenta`).
+> El tablero avisa mientras el Super Admin siga con la inicial. Cada cuenta interna cambia ahí
+> su propia contraseña; la gestión de usuarios no permite editarse a uno mismo.
 
 El seeder solo crea al Super Admin. Las cuentas de **Taquilla** se crean desde el panel
 (`/admin/users` → *+ Nuevo usuario*).

@@ -12,6 +12,7 @@ use App\Http\Controllers\CompraAdminController;
 use App\Http\Controllers\CompraController;
 use App\Http\Controllers\ErrorController;
 use App\Http\Controllers\GoogleAuthController;
+use App\Http\Controllers\MiCuentaController;
 use App\Http\Controllers\PagoSimuladoController;
 use App\Http\Controllers\PortalController;
 use App\Http\Controllers\ReporteController;
@@ -99,6 +100,18 @@ Route::get('/admin/dashboard', [AdminController::class, 'dashboard'])
 Route::get('/taquilla/dashboard', [TaquillaController::class, 'dashboard'])
     ->middleware(['guard.exclusivo:web', 'auth', 'account.status', 'rol:Taquilla'])
     ->name('taquilla.dashboard');
+
+// === MI CUENTA (cualquier cuenta interna, sobre sí misma) ===
+// Bajo /panel porque /mi-cuenta está reservada para el visitante (brief §7).
+Route::prefix('panel/mi-cuenta')->name('cuenta.')
+    ->middleware(['guard.exclusivo:web', 'auth', 'account.status'])
+    ->group(function () {
+        Route::get('/', [MiCuentaController::class, 'editar'])->name('editar');
+        Route::put('/', [MiCuentaController::class, 'actualizar'])->name('actualizar');
+        Route::put('/password', [MiCuentaController::class, 'cambiarPassword'])
+            ->middleware('throttle:6,1')
+            ->name('password');
+    });
 
 // Plantilla para roles internos adicionales:
 // Route::get('/supervisor/dashboard', [SupervisorController::class, 'dashboard'])

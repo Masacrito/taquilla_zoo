@@ -53,6 +53,12 @@
                     </a>
                 @endcanany
             @endforeach
+
+            <a href="{{ route('cuenta.editar') }}"
+               class="shrink-0 rounded-[10px] px-4 py-2.5 text-sm transition-colors
+                      {{ request()->routeIs('cuenta.*') ? 'bg-jade font-semibold text-white' : 'text-white/70 hover:bg-white/10' }}">
+                Mi cuenta
+            </a>
         </nav>
 
         {{-- Cuenta activa --}}
