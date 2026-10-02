@@ -227,8 +227,97 @@ class TableroTest extends TestCase
         $this->assertStringContainsString('no llegan a nadie', $textos);
     }
 
-    // El acceso de Taquilla al tablero ya lo cubre
+    // El acceso de Taquilla al tablero de admin ya lo cubre
     // VistasInternasTest::test_taquilla_no_entra_al_dashboard_de_admin, que
     // además usa la convención real del proyecto: `EnsureRole` devuelve al
     // dashboard propio en vez de responder 403.
+
+    // ═══ El tablero de Taquilla ═══
+
+    private function taquillero(): Cuenta
+    {
+        $usuario = Usuario::create(['nombre' => 'Cajero Uno', 'puesto' => 'Taquilla']);
+
+        return Cuenta::create([
+            'username'   => 'cajero_tablero',
+            'password'   => Hash::make('secreto123'),
+            'estado'     => 'activo',
+            'id_usuario' => $usuario->id_usuario,
+            'id_rol'     => 2,
+        ]);
+    }
+
+    public function test_taquilla_ve_su_operacion_del_dia(): void
+    {
+        $compra = $this->comprarYPagar(5);
+        Compra::consumirPases($compra->id, 2);
+        Acceso::create([
+            'id_compra' => $compra->id, 'id_torniquete' => 'T1', 'metodo' => 'qr',
+            'pases_consumidos' => 2, 'escaneado_en' => now(), 'resultado' => Acceso::PERMITIDO,
+        ]);
+
+        $this->actingAs($this->taquillero(), 'web')
+            ->get('/taquilla/dashboard')
+            ->assertOk()
+            ->assertSee('Escanear acceso')
+            ->assertSee('faltan 3 por llegar');
+    }
+
+    /**
+     * Los rechazos son el problema inmediato de quien está en la puerta:
+     * casi siempre es un QR de otra fecha.
+     */
+    public function test_taquilla_ve_los_escaneos_rechazados(): void
+    {
+        $compra = $this->comprarYPagar(2);
+
+        Acceso::create([
+            'id_compra' => $compra->id, 'id_torniquete' => 'T1', 'metodo' => 'qr',
+            'pases_consumidos' => 0, 'escaneado_en' => now(),
+            'resultado' => Acceso::RECHAZADO, 'motivo_rechazo' => 'Fecha equivocada',
+        ]);
+
+        $tablero = app(\App\Services\Reporte\TableroService::class)->paraTaquilla();
+
+        $this->assertSame(1, $tablero['rechazos']);
+        $this->assertSame(0, $tablero['ya_entraron'], 'Un rechazo no es una entrada.');
+    }
+
+    public function test_taquilla_sabe_si_hoy_no_se_abre(): void
+    {
+        AforoDiario::where('fecha', $this->hoy)
+            ->update(['cerrado' => true, 'motivo_cierre' => 'Fumigación programada']);
+
+        $this->actingAs($this->taquillero(), 'web')
+            ->get('/taquilla/dashboard')
+            ->assertOk()
+            ->assertSee('Hoy no se abre')
+            ->assertSee('Fumigación programada');
+    }
+
+    public function test_si_la_fecha_no_esta_en_el_calendario_tambien_avisa(): void
+    {
+        AforoDiario::query()->delete();
+
+        $tablero = app(\App\Services\Reporte\TableroService::class)->paraTaquilla();
+
+        $this->assertFalse($tablero['abierto']);
+        $this->assertFalse($tablero['en_calendario']);
+    }
+
+    /**
+     * Taquilla no tiene `ver_estadisticas`, `ver_errores` ni
+     * `ver_bitacora_auditoria`. Su tablero no debe ofrecerle puertas que no
+     * puede cruzar.
+     */
+    public function test_el_tablero_de_taquilla_no_ofrece_lo_que_ese_rol_no_alcanza(): void
+    {
+        $this->actingAs($this->taquillero(), 'web')
+            ->get('/taquilla/dashboard')
+            ->assertOk()
+            ->assertDontSee('Estadísticas')
+            ->assertDontSee('Fallos')
+            ->assertDontSee('Bitácora')
+            ->assertDontSee('Usuarios');
+    }
 }

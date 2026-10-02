@@ -21,6 +21,10 @@
 /storage/pail
 /.claude
 /.agents
+# El instalador de skills deja además una copia "universal" en /agent para
+# los agentes que no leen /.agents. Son 6,800 líneas de texto de terceros:
+# se quedan en el disco, no en el repositorio.
+/agent
 skills-lock.json
 
 # Brief del proyecto: se queda local, fuera del repositorio.

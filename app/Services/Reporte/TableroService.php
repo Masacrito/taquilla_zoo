@@ -42,6 +42,49 @@ class TableroService
     }
 
     /**
+     * El tablero de Taquilla, recortado a lo que ese rol puede ver.
+     *
+     * Sus permisos son `validar_accesos`, `ver_bitacora_accesos` y
+     * `generar_cortes` (brief §3.3). Nada de estadísticas, fallos del sistema
+     * ni gestión de catálogo: no solo no tiene permiso, tampoco podría
+     * arreglarlos, así que avisarle sería ruido.
+     *
+     * El enfoque también es distinto: no es un tablero para analizar, es para
+     * alguien parado en la caseta que necesita saber de un vistazo si abre
+     * hoy, cuánta gente falta por llegar y si algo se está rechazando en la
+     * puerta.
+     */
+    public function paraTaquilla(): array
+    {
+        $hoy = now()->toDateString();
+
+        $dia = AforoDiario::where('fecha', $hoy)->first();
+
+        $visita = $this->cortes->generar($hoy, $hoy, CorteIngresosService::POR_VISITA)['resumen'];
+        $venta  = $this->cortes->generar($hoy, $hoy, CorteIngresosService::POR_COMPRA)['resumen'];
+
+        $escaneos = Acceso::whereDate('escaneado_en', $hoy)
+            ->selectRaw('resultado, COUNT(*) AS veces, COALESCE(SUM(pases_consumidos), 0) AS pases')
+            ->groupBy('resultado')
+            ->get()
+            ->keyBy('resultado');
+
+        $entraron  = (int) ($escaneos[Acceso::PERMITIDO]->pases ?? 0);
+        $rechazos  = (int) ($escaneos[Acceso::RECHAZADO]->veces ?? 0);
+
+        return [
+            'abierto'          => $dia !== null && ! $dia->cerrado,
+            'motivo_cierre'    => $dia?->motivo_cierre,
+            'en_calendario'    => $dia !== null,
+            'pases_esperados'  => $visita['pases'],
+            'ya_entraron'      => $entraron,
+            'rechazos'         => $rechazos,
+            'vendido_centavos' => $venta['total_centavos'],
+            'compras'          => $venta['compras'],
+        ];
+    }
+
+    /**
      * Lo que requiere que alguien haga algo.
      *
      * Cada aviso es un problema que hoy NADIE detecta hasta que un visitante

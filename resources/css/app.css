@@ -27,6 +27,13 @@
 @source '../**/*.blade.php';
 @source '../**/*.js';
 
+/*
+ * El contenido de los recorridos vive en config/recorridos.php y de ahí sale
+ * la clase de tinte de cada tarjeta. Sin esta línea Tailwind no ve esas
+ * clases (no escanea /config) y las tarjetas saldrían sin color.
+ */
+@source '../../config/recorridos.php';
+
 @theme {
     /* === Paleta oficial (Pantone del manual) === */
     --color-jade: #009887;         /* ornamentos guerreros mayas — acción primaria */
@@ -158,9 +165,450 @@ html[data-js] [data-revelar][data-visible] {
     }
 }
 
+/* === Follaje y profundidad === */
+
+/*
+ * El parallax corre SOLO en escritorio. Mover varias capas en cada evento de
+ * scroll es de las causas más comunes de tirones en Android de gama media, y
+ * ese es justo el público: familias comprando desde el celular. En móvil las
+ * capas se quedan quietas y se ven igual de bien.
+ *
+ * `will-change` avisa al navegador que promueva la capa a la GPU antes del
+ * primer movimiento, no durante.
+ */
+.capa-follaje {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+@media (min-width: 768px) {
+    html[data-js] .capa-follaje[data-parallax] {
+        will-change: transform;
+    }
+}
+
+/*
+ * Viento: un vaivén lentísimo y asimétrico. Los periodos son números primos
+ * a propósito (11s, 13s, 17s) para que las capas nunca vuelvan a coincidir y
+ * el movimiento no se lea como un bucle.
+ */
+@keyframes vaiven {
+    0%, 100% { transform: rotate(0deg); }
+    50%      { transform: rotate(1.1deg); }
+}
+
+.viento-1 { animation: vaiven 11s ease-in-out infinite; transform-origin: top left; }
+.viento-2 { animation: vaiven 13s ease-in-out infinite; transform-origin: top right; }
+.viento-3 { animation: vaiven 17s ease-in-out infinite; transform-origin: bottom left; }
+
+/* === Barra de compra pegada al borde === */
+
+/*
+ * Aparece al pasar el encabezado. Mantiene la acción principal al alcance
+ * mientras la persona lee, que es lo único de toda la portada que mueve la
+ * aguja de vender un boleto.
+ */
+.barra-compra {
+    transform: translateY(100%);
+    transition: transform 300ms ease-out;
+}
+
+.barra-compra[data-visible] {
+    transform: translateY(0);
+}
+
+/* Quien pidió menos movimiento no ve nada de esto moverse. */
+@media (prefers-reduced-motion: reduce) {
+    .viento-1, .viento-2, .viento-3 { animation: none; }
+
+    html[data-js] .capa-follaje[data-parallax] { transform: none !important; }
+
+    .barra-compra { transition: none; }
+}
+
 /* === Avisos === */
 @utility flash {
     @apply mb-4 rounded-input px-4 py-3 text-sm;
 }
 @utility flash-ok    { @apply flash bg-jade-suave text-jade; }
 @utility flash-error { @apply flash bg-cinabrio-suave text-cinabrio; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * PORTADA — SISTEMA "NOTION"
+ * ═══════════════════════════════════════════════════════════════════════
+ *
+ * Tokens tomados de un DESIGN.md del sistema de diseño de Notion
+ * (.agents/skills/awesome-design-md/references/notion/DESIGN.md).
+ *
+ * Viven en su propio bloque y con nombres propios A PROPÓSITO: la portada
+ * es lo único que los usa. Los tokens institucionales de arriba (jade,
+ * magenta, cinabrio, Montserrat en mayúsculas) siguen intactos y siguen
+ * mandando en el resto del portal y en todo el panel interno.
+ *
+ * DOS DESVIACIONES del archivo original, las dos deliberadas:
+ *
+ *   1. El CTA dominante es jade, no el morado #5645d4 de Notion. La paleta
+ *      la fija el manual "Humanismo que Transforma" y no es negociable en
+ *      un sitio de gobierno. El DESIGN.md pide "un solo color de acción
+ *      dominante" y el jade cumple ese papel.
+ *
+ *   2. La banda del encabezado es verde selva, no el marino #0a1530. El
+ *      marino es el color de una marca de software; esto es un zoológico.
+ *      Se conserva el ROL que el sistema le da a esa banda —una sola
+ *      superficie oscura que ancla el encabezado y contra la que revienta
+ *      la tarjeta de contenido— y se cambia el tono al verde más oscuro de
+ *      la familia jade del manual.
+ *
+ * Todo lo demás (geometría, tipografía, superficies, elevación) es literal.
+ *
+ * La tipografía de Notion (Notion Sans) es propietaria. El propio archivo
+ * declara Inter como su fallback, y el proyecto ya la auto-hospeda.
+ */
+
+@theme {
+    /* Banda oscura del encabezado */
+    --color-selva: #06302b;
+    --color-selva-hondo: #04211e;
+
+    /* Superficies */
+    --color-lienzo: #ffffff;
+    --color-crema: #f6f5f4;
+    --color-crema-suave: #fafaf9;
+
+    /* Filetes de 1px — la única separación entre superficies */
+    --color-filete: #e5e3df;
+    --color-filete-suave: #ede9e4;
+    --color-filete-fuerte: #c8c4be;
+
+    /* Escala de texto, cálida y no azulada */
+    --color-tinta: #1a1a1a;
+    --color-carbon: #37352f;
+    --color-pizarra: #5d5b54;
+    --color-acero: #787671;
+    --color-piedra: #a4a097;
+
+    /* Tintes pastel de las tarjetas. En el original son los colores de las
+       propiedades de la base de datos del producto; aquí ordenan el
+       recorrido del zoológico. */
+    --color-tinte-durazno: #ffe8d4;
+    --color-tinte-rosa: #fde0ec;
+    --color-tinte-menta: #d9f3e1;
+    --color-tinte-lavanda: #e6e0f5;
+    --color-tinte-cielo: #dcecfa;
+    --color-tinte-amarillo: #fef7d6;
+    --color-tinte-amarillo-fuerte: #f9e79f;
+    --color-tinte-crema: #f8f5e8;
+
+    /* Geometría: 8px botones, 12px tarjetas. Rectángulos sobrios, nunca
+       píldoras — es lo que distingue a Notion de medio SaaS. */
+    --radius-nota: 12px;
+    --radius-boton: 8px;
+    --radius-chip: 6px;
+
+    /* Elevación: casi todo es plano con filete. La sombra profunda existe
+       para UNA sola pieza, la maqueta del producto sobre la banda. */
+    --shadow-nota: rgba(15, 15, 15, 0.08) 0 4px 12px 0;
+    --shadow-maqueta: rgba(15, 15, 15, 0.20) 0 24px 48px -8px;
+}
+
+/*
+ * Titulares: peso 600 y tracking NEGATIVO, al revés que el `titulo`
+ * institucional (mayúsculas, tracking +0.08em). Son dos voces opuestas, por
+ * eso no se mezclan en la misma página.
+ */
+@utility titular-nota {
+    font-family: var(--font-sans);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+}
+
+@utility titular-hero {
+    font-family: var(--font-sans);
+    font-weight: 600;
+    line-height: 1.05;
+    letter-spacing: -0.035em;
+}
+
+/* === Botones: rectángulos de 8px, 14px/500, altura táctil de 44px === */
+@utility btn-nota {
+    @apply inline-flex items-center justify-center gap-2 rounded-[8px] px-[18px] py-2.5
+           text-sm font-medium transition-colors cursor-pointer
+           focus:outline-none focus-visible:ring-3 focus-visible:ring-jade/25;
+}
+/*
+ * El primario va en jade OSCURO, no en el jade puro del manual: blanco
+ * sobre #009887 da 3.6:1 de contraste y el texto del botón mide 14px, que
+ * exige 4.5:1 para cumplir WCAG AA. El jade oscuro llega a 5.2:1 con el
+ * mismo color de marca. En un sitio de gobierno eso no es opcional.
+ */
+@utility btn-nota-primario   { @apply btn-nota bg-jade-oscuro text-white hover:bg-jade; }
+@utility btn-nota-secundario { @apply btn-nota border border-filete-fuerte text-tinta hover:bg-crema; }
+@utility btn-nota-claro      { @apply btn-nota bg-white text-tinta hover:bg-crema; }
+@utility btn-nota-contorno   { @apply btn-nota border border-white/35 text-white hover:bg-white/10; }
+
+/* === Tarjetas: 12px, filete de 1px, sin sombra === */
+@utility tarjeta-nota {
+    @apply rounded-[12px] border border-filete bg-lienzo p-6;
+}
+@utility tarjeta-nota-amplia {
+    @apply rounded-[12px] border border-filete bg-lienzo p-8;
+}
+
+/* Chips de etiqueta: 6px, 13px/600, sobre tinte pastel. */
+@utility chip-nota {
+    @apply inline-flex items-center gap-1.5 rounded-[6px] px-2 py-0.5 text-[13px] font-semibold;
+}
+
+/*
+ * NO hay decoración suelta en la banda (los "puntos de nota adhesiva" del
+ * original, siluetas de hojas, grecas). La atmósfera la pone la
+ * ilustración de la fauna, que es material real del zoológico; rellenar
+ * además con adornos dibujados a mano es exactamente lo que hace que una
+ * página se lea como plantilla.
+ */
+
+/* === Recorridos: arte al pasar el mouse y ficha de especies === */
+
+/*
+ * REGLA QUE MANDA AQUÍ: el hover no existe en una pantalla táctil, y el
+ * público compra desde el celular. Así que el arte del animal se ve FIJO
+ * en móvil (todos lo ven) y en escritorio es donde se asoma al pasar el
+ * mouse. La información de verdad —las especies— nunca depende del hover:
+ * vive en la ficha, que se abre con un toque o un clic.
+ */
+/*
+ * Qué tan marcada se ve la silueta. Un solo lugar para calibrarla: son
+ * siluetas negras sobre tinte pastel, así que la opacidad es todo el
+ * control de tono que hace falta. Por debajo de .15 casi no se nota; por
+ * arriba de .3 empieza a pelearse con el texto de la tarjeta.
+ */
+:root {
+    --opacidad-silueta: 0.22;
+}
+
+/*
+ * SIN `overflow: hidden`: la silueta tiene que poder salirse por el
+ * costado. Eso obliga a lo demás que hay aquí abajo, el z-index incluido.
+ */
+.tarjeta-recorrido {
+    position: relative;
+    display: block;
+    transition: transform 180ms ease-out, box-shadow 180ms ease-out;
+}
+
+/* Hundido al presionar: acuse de recibo inmediato en el táctil. */
+.tarjeta-recorrido:active {
+    transform: scale(0.99);
+}
+
+.arte-recorrido {
+    position: absolute;
+    bottom: -0.5rem;
+    right: 0.5rem;          /* móvil: DENTRO de la tarjeta, ver abajo */
+    width: 150px;
+    max-width: 46%;
+    pointer-events: none;
+    opacity: var(--opacidad-silueta);
+}
+
+/*
+ * De 640px para arriba la rejilla tiene dos o tres columnas y la silueta
+ * sí se asoma por el costado.
+ *
+ * El lado NO es siempre el mismo: la última columna asoma hacia la
+ * izquierda y las demás hacia la derecha, siempre hacia el interior de la
+ * página. Si todas asomaran a la derecha, las de la orilla se saldrían del
+ * contenedor y sacarían barra de scroll horizontal, que es justo lo que
+ * este archivo ya evita en el bloque de los jaguares.
+ *
+ * `scaleX(-1)` voltea al animal en las tarjetas que asoman por la
+ * izquierda para que siga mirando hacia adentro.
+ */
+@media (min-width: 640px) {
+    .arte-recorrido {
+        right: -2.75rem;
+        left: auto;
+    }
+
+    .tarjeta-recorrido:nth-child(2n) .arte-recorrido {
+        right: auto;
+        left: -2.75rem;
+        transform: scaleX(-1);
+    }
+}
+
+@media (min-width: 1024px) {
+    /* Con tres columnas la que voltea es la tercera, no la segunda. */
+    .tarjeta-recorrido:nth-child(2n) .arte-recorrido {
+        right: -2.75rem;
+        left: auto;
+        transform: none;
+    }
+
+    .tarjeta-recorrido:nth-child(3n) .arte-recorrido {
+        right: auto;
+        left: -2.75rem;
+        transform: scaleX(-1);
+    }
+}
+
+/*
+ * El asomo se anima solo de 768px para arriba, que es donde hay mouse.
+ * Abajo de eso la silueta se queda fija y visible: en una pantalla táctil
+ * el hover no existe y si el efecto fuera la única forma de verla, la
+ * mayoría del público nunca la vería.
+ */
+@media (min-width: 768px) {
+    .tarjeta-recorrido:hover,
+    .tarjeta-recorrido:focus-visible {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-nota);
+        /* Por encima de las tarjetas vecinas: sin esto, la silueta que se
+           sale queda tapada por la tarjeta de al lado. */
+        z-index: 1;
+    }
+
+    /* Reposo: escondida detrás de su propia tarjeta. La SALIDA es más
+       rápida que la entrada (140ms contra 220ms), que es lo que hace que
+       se sienta con reflejos y no pastoso. */
+    .arte-recorrido {
+        opacity: 0;
+        transform: translateX(-1.5rem);
+        transition: opacity 140ms ease-in, transform 140ms ease-in;
+    }
+
+    .tarjeta-recorrido:nth-child(2n) .arte-recorrido {
+        transform: translateX(1.5rem) scaleX(-1);
+    }
+
+    /* `focus-visible` va junto al hover a propósito: quien navega con
+       teclado ve exactamente lo mismo que quien trae mouse. */
+    .tarjeta-recorrido:hover .arte-recorrido,
+    .tarjeta-recorrido:focus-visible .arte-recorrido {
+        opacity: var(--opacidad-silueta);
+        transform: none;
+        transition: opacity 220ms ease-out, transform 220ms ease-out;
+    }
+
+    .tarjeta-recorrido:nth-child(2n):hover .arte-recorrido,
+    .tarjeta-recorrido:nth-child(2n):focus-visible .arte-recorrido {
+        transform: scaleX(-1);
+    }
+}
+
+@media (min-width: 1024px) {
+    /* Con tres columnas se corrigen las direcciones del reposo y del
+       estado final: la que sale volteada es la tercera. */
+    .tarjeta-recorrido:nth-child(2n) .arte-recorrido {
+        transform: translateX(-1.5rem);
+    }
+    .tarjeta-recorrido:nth-child(3n) .arte-recorrido {
+        transform: translateX(1.5rem) scaleX(-1);
+    }
+    .tarjeta-recorrido:nth-child(2n):hover .arte-recorrido,
+    .tarjeta-recorrido:nth-child(2n):focus-visible .arte-recorrido {
+        transform: none;
+    }
+    .tarjeta-recorrido:nth-child(3n):hover .arte-recorrido,
+    .tarjeta-recorrido:nth-child(3n):focus-visible .arte-recorrido {
+        transform: scaleX(-1);
+    }
+}
+
+/*
+ * Quien pidió menos movimiento ve la silueta quieta, visible y YA COLOCADA
+ * en su sitio final: sin esto se quedaría a medio camino, desplazada y
+ * esperando una animación que nunca va a correr.
+ */
+@media (prefers-reduced-motion: reduce) {
+    .tarjeta-recorrido,
+    .arte-recorrido {
+        transition: none;
+    }
+
+    .tarjeta-recorrido:hover {
+        transform: none;
+    }
+
+    .arte-recorrido,
+    .tarjeta-recorrido:hover .arte-recorrido {
+        opacity: var(--opacidad-silueta);
+        transform: none;
+    }
+
+    /* El volteo no es animación, es orientación: se conserva. */
+    @media (min-width: 640px) {
+        .tarjeta-recorrido:nth-child(2n) .arte-recorrido,
+        .tarjeta-recorrido:nth-child(2n):hover .arte-recorrido {
+            transform: scaleX(-1);
+        }
+    }
+
+    @media (min-width: 1024px) {
+        .tarjeta-recorrido:nth-child(2n) .arte-recorrido,
+        .tarjeta-recorrido:nth-child(2n):hover .arte-recorrido {
+            transform: none;
+        }
+        .tarjeta-recorrido:nth-child(3n) .arte-recorrido,
+        .tarjeta-recorrido:nth-child(3n):hover .arte-recorrido {
+            transform: scaleX(-1);
+        }
+    }
+}
+
+/*
+ * La ficha es un <dialog> nativo: la trampa de foco, cerrar con Esc y el
+ * fondo oscurecido vienen de fábrica y sin una sola librería.
+ */
+.ficha {
+    /*
+     * `margin: auto` explícito: el navegador centra los <dialog> modales con
+     * esa regla, pero el reset de Tailwind le pone margin 0 a todo y la
+     * anula. Sin esto la ficha se pega a la esquina superior izquierda.
+     */
+    margin: auto;
+    width: min(44rem, calc(100vw - 2rem));
+    max-height: min(85vh, 46rem);
+    padding: 0;
+    overflow: auto;
+    border: 1px solid var(--color-filete);
+    border-radius: var(--radius-nota);
+    background: var(--color-lienzo);
+    color: var(--color-tinta);
+}
+
+/* Verde selva al 55%: dentro del 40-60% que hace falta para que el fondo
+   deje de competir con la ficha. */
+.ficha::backdrop {
+    background: rgb(4 33 30 / 0.55);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .ficha[open] {
+        animation: ficha-entra 200ms ease-out;
+    }
+}
+
+@keyframes ficha-entra {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.985);
+    }
+}
+
+/*
+ * Respaldo para quien no tenga JS o traiga un navegador sin <dialog>: la
+ * tarjeta es un ancla de verdad, y la ficha apuntada por el fragmento se
+ * muestra como un bloque normal al final de la página. El script marca
+ * `data-fichas` solo si el navegador sí soporta el diálogo modal.
+ */
+html:not([data-fichas]) .ficha:target {
+    display: block;
+    position: static;
+    width: auto;
+    max-width: none;
+    max-height: none;
+    margin-top: 1.25rem;
+}

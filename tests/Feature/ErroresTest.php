@@ -188,6 +188,20 @@ class ErroresTest extends TestCase
     }
 
     /**
+     * Salió probando el panel: abrir /logout desde la barra de direcciones
+     * daba el «Method Not Allowed» de Laravel, en inglés y sin contexto.
+     * Pasa al recargar tras enviar un formulario o al guardar en favoritos
+     * una URL que en realidad era una acción.
+     */
+    public function test_una_ruta_abierta_con_el_metodo_equivocado_muestra_la_pantalla_propia(): void
+    {
+        $this->get('/logout')       // solo acepta POST
+            ->assertStatus(405)
+            ->assertSee('Esa acción no se puede abrir así')
+            ->assertDontSee('Method Not Allowed');
+    }
+
+    /**
      * El 419 es el más frecuente en un portal de compra: la gente deja la
      * pestaña abierta y vuelve al rato. Sin pantalla propia veían el «Page
      * Expired» de Laravel, que no le dice nada a nadie.

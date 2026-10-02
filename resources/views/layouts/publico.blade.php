@@ -64,6 +64,40 @@
         @yield('contenido')
     </main>
 
+    {{-- ── Barra de compra ─────────────────────────────────────────────────
+         Aparece al pasar el encabezado y mantiene la acción principal al
+         alcance mientras la persona lee. Solo en la portada: en el resto del
+         portal ya hay un botón de comprar en la cabecera.
+
+         Empieza fuera de pantalla por CSS y el script la sube; si el JS no
+         corre, simplemente no aparece y nadie pierde nada. --}}
+    @hasSection('ancho_completo')
+        <div class="barra-compra fixed inset-x-0 bottom-0 z-40 border-t border-borde
+                    bg-superficie/95 px-4 py-3 shadow-[0_-8px_24px_rgba(0,0,0,0.08)] backdrop-blur"
+             data-barra-compra>
+            <div class="mx-auto flex max-w-5xl items-center justify-between gap-4">
+                <div class="min-w-0">
+                    <p class="titulo truncate text-[11px] text-texto-suave">
+                        {{ $estado['titulo'] ?? 'Zoológico Miguel Álvarez del Toro' }}
+                    </p>
+                    <p class="truncate text-xs text-texto-suave">
+                        Martes a domingo, 8:30 a 16:00 hrs
+                    </p>
+                </div>
+
+                @auth('cliente')
+                    <a href="{{ route('compras.crear') }}" class="btn-primary shrink-0 px-4 sm:px-6">
+                        Comprar boletos
+                    </a>
+                @else
+                    <a href="{{ route('portal.registro') }}" class="btn-primary shrink-0 px-4 sm:px-6">
+                        Comprar boletos
+                    </a>
+                @endauth
+            </div>
+        </div>
+    @endif
+
     {{-- Datos tomados del sitio oficial zoomat.chiapas.gob.mx: domicilio,
          conmutador, correo de contacto y el programa de visitas escolares que
          opera el área de Educación Ambiental. --}}
@@ -121,6 +155,14 @@
 
             <div class="mt-8 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-borde pt-5 text-[11px] text-texto-suave">
                 <span>Secretaría de Medio Ambiente e Historia Natural · Gobierno del Estado de Chiapas</span>
+                <span aria-hidden="true">·</span>
+                {{-- Crédito obligado por la licencia de las siluetas de los
+                     recorridos: game-icons.net las publica bajo CC BY 3.0, que
+                     permite uso comercial y modificación a cambio de acreditar
+                     a los autores. Si algún día se quitan las siluetas, esta
+                     línea se va con ellas. --}}
+                <a href="https://game-icons.net/" target="_blank" rel="noopener"
+                   class="hover:text-jade hover:underline">Siluetas de fauna: game-icons.net (CC BY 3.0)</a>
                 <span aria-hidden="true">·</span>
                 {{-- El personal entra por otra puerta y con username, no con
                      correo. Sin este enlace tendrían que saberse la URL. --}}
