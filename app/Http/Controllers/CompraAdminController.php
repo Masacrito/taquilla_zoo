@@ -4,11 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Compra;
 use App\Services\Venta\CancelarCompraService;
+use App\Services\Venta\ReembolsarCompraService;
 use Illuminate\Http\Request;
 use RuntimeException;
 
 /**
- * Consulta y cancelación de compras desde el panel (brief §7).
+ * Consulta, cancelación y reembolso de compras desde el panel (brief §7).
  */
 class CompraAdminController extends Controller
 {
@@ -66,5 +67,20 @@ class CompraAdminController extends Controller
         }
 
         return back()->with('success', "Compra {$compra->folio} cancelada. Los lugares no usados se liberaron.");
+    }
+
+    public function reembolsar(Request $request, Compra $compra, ReembolsarCompraService $reembolsos)
+    {
+        $datos = $request->validate([
+            'motivo' => ['required', 'string', 'min:5', 'max:300'],
+        ], [], ['motivo' => 'motivo del reembolso']);
+
+        try {
+            $reembolsos->reembolsar($compra, $datos['motivo']);
+        } catch (RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', "Compra {$compra->folio} marcada como reembolsada.");
     }
 }

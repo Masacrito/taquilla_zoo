@@ -33,6 +33,8 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', [PortalController::class, 'inicio'])->name('portal.inicio');
 
+Route::get('/politicas', [PortalController::class, 'politicas'])->name('portal.politicas');
+
 Route::middleware('guard.exclusivo:cliente')->group(function () {
     Route::get('/registro',  [ClienteAuthController::class, 'mostrarRegistro'])->name('portal.registro');
     Route::post('/registro', [ClienteAuthController::class, 'registrar']);
@@ -259,6 +261,10 @@ Route::prefix('admin')->name('admin.')->middleware(['guard.exclusivo:web', 'auth
     Route::put('/compras/{compra}/cancelar', [CompraAdminController::class, 'cancelar'])
         ->middleware('permission:cancelar_compras')
         ->name('compras.cancelar');
+
+    Route::put('/compras/{compra}/reembolsar', [CompraAdminController::class, 'reembolsar'])
+        ->middleware('permission:autorizar_reembolsos')
+        ->name('compras.reembolsar');
 
     // === REPORTES ===
     // `generar_cortes` lo tiene también Taquilla (brief §3.3), por eso la

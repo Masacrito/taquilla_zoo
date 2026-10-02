@@ -157,6 +157,8 @@
             <div class="mt-8 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-borde pt-5 text-[11px] text-texto-suave">
                 <span>Secretaría de Medio Ambiente e Historia Natural · Gobierno del Estado de Chiapas</span>
                 <span aria-hidden="true">·</span>
+                <a href="{{ route('portal.politicas') }}" class="hover:text-jade hover:underline">Políticas de entrega, cancelación y reembolso</a>
+                <span aria-hidden="true">·</span>
                 {{-- Crédito obligado por la licencia de las siluetas de los
                      recorridos: game-icons.net las publica bajo CC BY 3.0, que
                      permite uso comercial y modificación a cambio de acreditar

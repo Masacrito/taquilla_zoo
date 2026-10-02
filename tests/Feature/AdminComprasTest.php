@@ -8,6 +8,7 @@ use App\Models\Compra;
 use App\Models\Cuenta;
 use App\Models\Movimiento;
 use App\Models\Nacionalidad;
+use App\Models\Pago;
 use App\Models\Rubro;
 use App\Models\Subnacionalidad;
 use App\Models\TipoAcceso;
@@ -211,6 +212,70 @@ class AdminComprasTest extends TestCase
 
         $this->assertNotNull($mov);
         $this->assertSame('Solicitud del visitante', $mov->detalles['motivo']);
+    }
+
+    // ═══ Reembolso ═══
+
+    public function test_una_compra_cancelada_se_marca_como_reembolsada(): void
+    {
+        $compra = $this->compra(2);
+        $compra->update(['estado' => Compra::CANCELADA, 'observaciones' => 'Cancelada: cierre por lluvia']);
+
+        $pago = Pago::create([
+            'id_compra' => $compra->id, 'proveedor' => 'simulada', 'referencia_externa' => 'SIM-REEMBOLSO',
+            'monto_centavos' => $compra->total_centavos, 'estado' => Pago::APROBADO,
+        ]);
+
+        $this->actingAs($this->admin(), 'web')
+            ->put(route('admin.compras.reembolsar', $compra), ['motivo' => 'Devuelto en el portal del banco'])
+            ->assertSessionHas('success');
+
+        $compra->refresh();
+        $this->assertSame(Compra::REEMBOLSADA, $compra->estado);
+        $this->assertSame(Pago::REEMBOLSADO, $pago->refresh()->estado);
+        $this->assertStringContainsString('Cancelada: cierre por lluvia', $compra->observaciones);
+        $this->assertStringContainsString('Reembolsada: Devuelto en el portal del banco', $compra->observaciones);
+
+        $movimiento = Movimiento::where('tabla', 'compras')->latest('id_movimiento')->first();
+        $this->assertSame(Compra::REEMBOLSADA, $movimiento->detalles['estado']);
+    }
+
+    /** Primero se cancela (el QR deja de servir) y después se devuelve. */
+    public function test_no_se_reembolsa_una_compra_que_no_esta_cancelada(): void
+    {
+        $compra = $this->compra();
+        $compra->update(['estado' => Compra::PAGADA]);
+
+        $this->actingAs($this->admin(), 'web')
+            ->put(route('admin.compras.reembolsar', $compra), ['motivo' => 'Sin cancelar antes'])
+            ->assertSessionHas('error');
+
+        $this->assertSame(Compra::PAGADA, $compra->refresh()->estado);
+    }
+
+    public function test_taquilla_no_puede_reembolsar(): void
+    {
+        $compra = $this->compra();
+        $compra->update(['estado' => Compra::CANCELADA]);
+
+        $this->actingAs($this->taquillero(), 'web')
+            ->put(route('admin.compras.reembolsar', $compra), ['motivo' => 'Sin permiso'])
+            ->assertRedirect(route('taquilla.dashboard'));
+
+        $this->assertSame(Compra::CANCELADA, $compra->refresh()->estado);
+    }
+
+    // ═══ Políticas públicas (requisito del banco) ═══
+
+    public function test_las_politicas_son_publicas_y_estan_enlazadas_desde_el_portal(): void
+    {
+        $this->get('/politicas')
+            ->assertOk()
+            ->assertSee('Entrega de los boletos')
+            ->assertSee('Cancelaciones y reembolsos')
+            ->assertSee(config('politicas.correo_contacto'));
+
+        $this->get('/')->assertSee(route('portal.politicas'), false);
     }
 
     public function test_taquilla_no_puede_cancelar(): void

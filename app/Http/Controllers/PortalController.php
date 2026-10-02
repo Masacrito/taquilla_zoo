@@ -14,4 +14,13 @@ class PortalController extends Controller
             'estado' => $estado->ahora(),
         ]);
     }
+
+    /**
+     * Políticas de entrega, cancelación y reembolso. Pública sin condición:
+     * el banco la revisa sin sesión (guía KYC e-commerce, pregunta 7).
+     */
+    public function politicas()
+    {
+        return view('publico.politicas', ['politicas' => config('politicas')]);
+    }
 }

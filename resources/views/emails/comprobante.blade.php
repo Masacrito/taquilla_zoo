@@ -38,6 +38,7 @@ Ver mi compra
 - **Horario: martes a domingo, 8:30 a 16:00 hrs. Lunes cerrado.**
 - Verifica que el tipo de visitante sea el correcto: se valida en el acceso y, de lo contrario, se paga boleto.
 - Tercera edad presenta INAPAM. Estudiante presenta credencial. Niño Pavón gratis hasta 1.20 m de estatura.
+- El boleto vale solo para la fecha de visita. Consulta las [políticas de entrega, cancelación y reembolso]({{ route('portal.politicas') }}).
 
 Gracias por tu visita,
 **Zoológico Regional Miguel Álvarez del Toro**

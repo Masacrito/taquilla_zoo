@@ -201,6 +201,11 @@
                 <li>Tercera edad presenta INAPAM y estudiante presenta credencial.</li>
                 <li>Niño Pavón entra gratis hasta 1.20 m de estatura.</li>
                 <li>El código QR llega por correo. Si no lo ves, revisa spam o correo no deseado.</li>
+                <li>
+                    Los boletos valen solo para la fecha elegida. Al pagar aceptas las
+                    <a href="{{ route('portal.politicas') }}" target="_blank" rel="noopener"
+                       class="text-jade underline-offset-2 hover:underline">políticas de entrega, cancelación y reembolso</a>.
+                </li>
             </ul>
         </div>
 

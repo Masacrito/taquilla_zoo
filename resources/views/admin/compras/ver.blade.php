@@ -141,6 +141,37 @@
                 </div>
             @endcan
 
+            {{-- Solo aparece cuando hay algo que reembolsar o ya se reembolsó:
+                 el resto del tiempo sería una tarjeta diciendo que no aplica. --}}
+            @can('autorizar_reembolsos')
+                @if ($compra->puedeTransicionarA(\App\Models\Compra::REEMBOLSADA))
+                    <div class="card">
+                        <p class="titulo text-sm text-magenta">Reembolso</p>
+                        <p class="mt-2 text-xs text-texto-suave">
+                            Esto solo deja constancia: el sistema no devuelve dinero. Haz primero la
+                            devolución de {{ $compra->totalFormateado() }} en el portal del banco y
+                            después márcala aquí.
+                        </p>
+
+                        <form method="POST" action="{{ route('admin.compras.reembolsar', $compra) }}"
+                              class="mt-3 grid gap-2"
+                              onsubmit="return confirm('¿Marcar la compra {{ $compra->folio }} como reembolsada? No se puede deshacer.');">
+                            @csrf @method('PUT')
+                            <textarea name="motivo" rows="2" class="input text-xs"
+                                      placeholder="Motivo y referencia de la devolución" required minlength="5"></textarea>
+                            <button type="submit" class="btn-outline btn-sm">Marcar como reembolsada</button>
+                        </form>
+                    </div>
+                @endif
+            @endcan
+
+            @if ($compra->observaciones)
+                <div class="card">
+                    <p class="titulo text-sm text-jade">Observaciones</p>
+                    <p class="mt-2 whitespace-pre-line text-xs text-texto-suave">{{ $compra->observaciones }}</p>
+                </div>
+            @endif
+
         </div>
     </div>
 @endsection
