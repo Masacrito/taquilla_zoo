@@ -1,5 +1,6 @@
 <?php
 
+use App\Jobs\EnviarRecordatoriosDeVisita;
 use App\Jobs\ExpirarComprasPendientes;
 use App\Jobs\GenerarCalendario;
 use App\Jobs\PurgarErroresAtendidos;
@@ -36,6 +37,18 @@ Schedule::job(new GenerarCalendario())
     ->dailyAt('00:10')
     ->withoutOverlapping()
     ->name('generar-calendario');
+
+// Recordatorios de visita (2026-10-05): la tarde anterior y la mañana del
+// mismo día. Cada uno corre una vez; las horas salen de la configuración.
+Schedule::job(new EnviarRecordatoriosDeVisita(EnviarRecordatoriosDeVisita::VISPERA))
+    ->dailyAt(config('taquilla.recordatorios.vispera'))
+    ->withoutOverlapping()
+    ->name('recordatorios-vispera');
+
+Schedule::job(new EnviarRecordatoriosDeVisita(EnviarRecordatoriosDeVisita::MISMO_DIA))
+    ->dailyAt(config('taquilla.recordatorios.mismo_dia'))
+    ->withoutOverlapping()
+    ->name('recordatorios-mismo-dia');
 
 // Fallos ya atendidos más viejos que el periodo de retención. Una vez al día
 // de madrugada: no corre prisa, y la tabla crece despacio.

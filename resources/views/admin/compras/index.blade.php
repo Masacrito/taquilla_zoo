@@ -1,6 +1,6 @@
 @extends('layouts.interno')
 
-@section('titulo', 'Compras')
+@section('titulo', 'Ventas')
 @section('subtitulo', 'Ventas en línea')
 
 @section('contenido')

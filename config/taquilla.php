@@ -72,9 +72,33 @@ return [
     'compra' => [
         'max_por_campo' => 100,
 
+        // Agregado 2026-10-05. Hasta qué hora se venden boletos para el mismo
+        // día: el zoológico cierra a las 16:00 y quien compra después ya no
+        // alcanza a entrar. Pasada esta hora, el primer día a la venta es el
+        // siguiente que esté abierto.
+        'hora_corte_mismo_dia' => env('COMPRA_HORA_CORTE_MISMO_DIA', '15:30'),
+
         // Cuánto dura verificado el correo de quien compra como invitado.
         // Pasado ese tiempo se le vuelve a pedir el código.
         'minutos_sesion_invitado' => 120,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Recordatorios de visita
+    |--------------------------------------------------------------------------
+    |
+    | Agregado 2026-10-05. A quien tiene boletos pagados y sin usar se le
+    | recuerda la visita dos veces: la tarde anterior y la mañana del mismo
+    | día, cinco horas antes del cierre —más tarde ya no alcanzaría a
+    | recorrer el zoológico—. Las horas las lee routes/console.php.
+    |
+    */
+
+    'recordatorios' => [
+        'activos'   => (bool) env('RECORDATORIOS_ACTIVOS', true),
+        'vispera'   => env('RECORDATORIOS_HORA_VISPERA', '18:00'),
+        'mismo_dia' => env('RECORDATORIOS_HORA_MISMO_DIA', '11:00'),
     ],
 
     /*

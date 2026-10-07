@@ -72,6 +72,7 @@ class PortalCompraTest extends TestCase
                 'id_rubro'    => $this->rubro->id,
                 'cant_hombre' => $hombres,
                 'cant_mujer'  => $mujeres,
+                ...$this->procedencia(),
             ]],
         ];
     }
@@ -87,33 +88,32 @@ class PortalCompraTest extends TestCase
             ->assertSee('Lunes cerrado');
     }
 
-    public function test_la_portada_arma_la_seccion_de_los_jaguares_y_los_habitats(): void
+    public function test_la_portada_acompana_la_compra_con_la_huella(): void
     {
         $respuesta = $this->get('/')->assertOk();
 
-        // Las dos fotos, cada una con su <picture> y su respaldo JPEG.
-        $respuesta->assertSee('jaguar-moteado.webp', false);
-        $respuesta->assertSee('jaguar-negro.webp', false);
-        $respuesta->assertSee('jaguar-negro.jpg', false);
-        $respuesta->assertSee('Son el mismo animal');
-
-        // Los seis hábitats y sus grecas. El `id` del patrón lleva índice: si
-        // se repitiera, las seis tarjetas pintarían el patrón de la primera.
-        $respuesta->assertSee('Museo del Cocodrilo');
-        $respuesta->assertSee('Senderos en selva');
-        $respuesta->assertSee('greca-0', false);
-        $respuesta->assertSee('greca-5', false);
+        $respuesta->assertSee('models/huella/huella.glb', false);
+        $respuesta->assertSee('models/huella/poster.webp', false);
+        $respuesta->assertSee('data-explode', false);
+        $respuesta->assertSee('Elige tu tipo de visitante');
+        $respuesta->assertSee('Programa tu fecha de visita');
+        $respuesta->assertSee('El QR se invalida al pasar');
+        $respuesta->assertSee(route('compras.crear'), false);
+        $respuesta->assertSee('Las áreas del ZooMAT');
+        foreach (config('recorridos') as $area) {
+            $respuesta->assertSee($area['nombre']);
+            $respuesta->assertSee('id="ficha-'.$area['slug'].'"', false);
+        }
     }
 
     public function test_la_portada_no_esconde_contenido_si_falla_el_javascript(): void
     {
-        // La regla que oculta los bloques que aparecen al hacer scroll cuelga
-        // de `html[data-js]`, y esa marca la pone un script. Si algún día se
-        // quita el script sin quitar el CSS, media portada queda invisible.
+        // La información y el respaldo se renderizan en servidor, sin depender del canvas.
         $this->get('/')
             ->assertOk()
-            ->assertSee('document.documentElement.dataset.js', false)
-            ->assertSee('data-revelar', false);
+            ->assertSee('data-poster', false)
+            ->assertSee('Compra tu acceso desde casa')
+            ->assertSee('Mis compras');
     }
 
     /**
@@ -149,6 +149,7 @@ class PortalCompraTest extends TestCase
             'fecha_nacimiento'      => '1995-03-10',
             'genero'                => 'Mujer',
             'telefono'              => '9610001111',
+            ...$this->procedencia(),
         ])->assertRedirect();
 
         $cliente = Cliente::where('correo', 'nueva@example.com')->firstOrFail();

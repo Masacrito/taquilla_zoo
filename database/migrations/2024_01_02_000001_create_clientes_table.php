@@ -33,6 +33,11 @@ return new class extends Migration {
             $table->unsignedBigInteger('id_pais')->nullable();
             $table->unsignedBigInteger('id_estado')->nullable();
 
+            // Agregado 2026-10-05 (procedencia obligatoria en el registro, para
+            // las estadísticas). Solo lleva valor si el estado tiene municipios
+            // en el catálogo; ver App\Services\Cliente\Procedencia.
+            $table->unsignedBigInteger('id_municipio')->nullable();
+
             $table->timestampTz('correo_verificado_en')->nullable();
 
             $table->rememberToken();

@@ -44,6 +44,12 @@ return new class extends Migration {
             $table->foreignId('id_promocion')->nullable()->constrained('promociones')->nullOnDelete();
             $table->text('observaciones')->nullable();
 
+            // Agregado 2026-10-05 (recordatorios de visita). Cuándo se mandó
+            // cada aviso; NULL = aún no. Es lo que impide mandarlo dos veces
+            // si la tarea programada se repite. Ver EnviarRecordatoriosDeVisita.
+            $table->timestampTz('recordatorio_vispera_en')->nullable();
+            $table->timestampTz('recordatorio_dia_en')->nullable();
+
             $table->timestampsTz();
             $table->softDeletesTz();
 

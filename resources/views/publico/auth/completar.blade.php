@@ -43,29 +43,13 @@
                 </select>
             </div>
 
-            <div>
+            <div class="sm:col-span-2">
                 <label class="label">Teléfono</label>
                 <input type="tel" name="telefono" class="input" value="{{ old('telefono') }}" required>
             </div>
-            <div>
-                <label class="label">País</label>
-                <select name="id_pais" class="input">
-                    <option value="">— Opcional —</option>
-                    @foreach ($paises as $p)
-                        <option value="{{ $p->id }}" @selected(old('id_pais') == $p->id)>{{ $p->nombre }}</option>
-                    @endforeach
-                </select>
-            </div>
 
-            <div class="sm:col-span-2">
-                <label class="label">Estado</label>
-                <select name="id_estado" class="input">
-                    <option value="">— Opcional —</option>
-                    @foreach ($estados as $e)
-                        <option value="{{ $e->id }}" @selected(old('id_estado') == $e->id)>{{ $e->nombre }}</option>
-                    @endforeach
-                </select>
-            </div>
+            <x-procedencia class="sm:col-span-2" requerido
+                           :paises="$paises" :estados="$estados" :municipios="$municipios" />
 
             <div class="sm:col-span-2">
                 <button type="submit" class="btn-primary w-full">Terminar y entrar</button>

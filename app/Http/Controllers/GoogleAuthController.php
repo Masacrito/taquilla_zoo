@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Cliente;
 use App\Models\Estado;
+use App\Models\Municipio;
 use App\Models\Pais;
+use App\Services\Cliente\Procedencia;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Socialite\Facades\Socialite;
@@ -117,10 +119,11 @@ class GoogleAuthController extends Controller
             'pendiente' => $pendiente,
             'paises'    => Pais::activos()->orderBy('nombre')->get(),
             'estados'   => Estado::activos()->orderBy('nombre')->get(),
+            'municipios' => Municipio::activos()->orderBy('nombre')->get(),
         ]);
     }
 
-    public function completar(Request $request)
+    public function completar(Request $request, Procedencia $procedencia)
     {
         $pendiente = $request->session()->get(self::SESION_PENDIENTE);
 
@@ -134,12 +137,14 @@ class GoogleAuthController extends Controller
             'fecha_nacimiento' => ['required', 'date', 'before:today'],
             'genero'           => ['required', 'string', 'max:40'],
             'telefono'         => ['required', 'string', 'max:30'],
-            'id_pais'          => ['nullable', 'exists:paises,id'],
+            'id_pais'          => ['required', 'exists:paises,id'],
             'id_estado'        => ['nullable', 'exists:estados,id'],
+            'id_municipio'     => ['nullable', 'exists:municipios,id'],
         ]);
 
         $cliente = Cliente::create([
             ...$datos,
+            ...$procedencia->exigir($datos),
             'correo'             => $pendiente['correo'],
             'password'           => null,          // entró por OAuth
             'proveedor_oauth'    => 'google',

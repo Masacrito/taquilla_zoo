@@ -146,7 +146,7 @@
             ['gestion_rubros',         'admin.rubros.index',   'Rubros',      'Las tarifas que se cobran y su vigencia.'],
             ['gestion_catalogos',      'admin.catalogos.index','Catálogos',   'Países, estados, municipios y clasificación del visitante.'],
             ['gestion_aforo',          'admin.aforo.index',    'Calendario',  'Qué días abre el zoológico y cuáles se cierran.'],
-            ['gestion_clientes',       'admin.compras.index',  'Compras',     'Folios vendidos, su estado y cancelaciones.'],
+            ['gestion_clientes',       'admin.compras.index',  'Ventas',      'Folios vendidos, su estado y cancelaciones.'],
             ['gestion_clientes',       'admin.clientes.index', 'Visitantes',  'Quién se registró en el portal.'],
             ['generar_cortes',         'admin.cortes',         'Cortes',      'Lo cobrado por periodo, desglosado por concepto.'],
             ['ver_estadisticas',       'admin.estadisticas',   'Estadísticas','Quién visita el zoológico y de dónde viene.'],

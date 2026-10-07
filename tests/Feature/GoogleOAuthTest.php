@@ -145,6 +145,7 @@ class GoogleOAuthTest extends TestCase
             'fecha_nacimiento' => '1995-06-15',
             'genero'           => 'Mujer',
             'telefono'         => '9610002222',
+            ...$this->procedencia(),
         ])->assertRedirect(route('compras.crear'));
 
         $cliente = Cliente::where('correo', 'nueva@example.com')->firstOrFail();

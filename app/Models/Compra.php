@@ -62,6 +62,8 @@ class Compra extends Model
             'pases_total'    => 'integer',
             'pases_usados'   => 'integer',
             'qr_expira_en'   => 'datetime',
+            'recordatorio_vispera_en' => 'datetime',
+            'recordatorio_dia_en'     => 'datetime',
         ];
     }
 

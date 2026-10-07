@@ -46,6 +46,13 @@
             <div class="card mb-6" data-calendario>
                 <label class="label">Fecha de visita</label>
 
+                @if ($ventaDeHoyCerrada)
+                    <p class="mb-2 text-xs text-texto-suave">
+                        La venta para hoy cerró a las {{ config('taquilla.compra.hora_corte_mismo_dia') }} hrs.
+                        Te marcamos el siguiente día disponible.
+                    </p>
+                @endif
+
                 {{-- El valor viaja aquí; los botones de abajo solo lo escriben. --}}
                 <input type="hidden" name="fecha_visita" data-fecha-visita
                        value="{{ old('fecha_visita', $fechaElegida) }}">
@@ -143,29 +150,15 @@
                             </div>
                         </div>
 
-                        <details class="mt-3" @if (old('renglones.' . $i . '.id_pais') || old('renglones.' . $i . '.id_estado')) open @endif>
-                            <summary class="cursor-pointer text-xs text-jade">Procedencia (opcional)</summary>
-                            <div class="mt-3 grid gap-3 sm:grid-cols-3">
-                                <select name="renglones[{{ $i }}][id_pais]" class="input text-xs">
-                                    <option value="">País</option>
-                                    @foreach ($paises as $p)
-                                        <option value="{{ $p->id }}" @selected(old('renglones.' . $i . '.id_pais') == $p->id)>{{ $p->nombre }}</option>
-                                    @endforeach
-                                </select>
-                                <select name="renglones[{{ $i }}][id_estado]" class="input text-xs">
-                                    <option value="">Estado</option>
-                                    @foreach ($estados as $e)
-                                        <option value="{{ $e->id }}" @selected(old('renglones.' . $i . '.id_estado') == $e->id)>{{ $e->nombre }}</option>
-                                    @endforeach
-                                </select>
-                                <select name="renglones[{{ $i }}][id_municipio]" class="input text-xs">
-                                    <option value="">Municipio</option>
-                                    @foreach ($municipios as $m)
-                                        <option value="{{ $m->id }}" data-estado="{{ $m->id_estado }}" @selected(old('renglones.' . $i . '.id_municipio') == $m->id)>{{ $m->nombre }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        </details>
+                        {{-- Obligatoria en las tarifas que llevan personas (la
+                             usan las estadísticas). Con cuenta llega precargada
+                             desde el perfil. --}}
+                        <p class="mb-2 mt-3 text-xs text-texto-suave">¿De dónde nos visitan?</p>
+                        <x-procedencia compacto nombre="renglones[{{ $i }}]" :valores="$procedenciaCliente"
+                                       :paises="$paises" :estados="$estados" :municipios="$municipios" />
+                        <p class="mt-2 text-xs font-medium text-cinabrio" data-falta="procedencia" role="alert" hidden>
+                            Indica de dónde vienen las personas de esta tarifa.
+                        </p>
                     </div>
                 @endforeach
             </div>
@@ -370,32 +363,31 @@
                         .map((campo) => fijar(campo, campo.value))
                         .every((n) => n === 0);
 
+                    // La procedencia solo se exige en las tarifas con personas.
+                    // Los selectores apagados no cuentan: ahí no aplica.
+                    let avisoProcedencia = null;
+
+                    form.querySelectorAll('[data-procedencia]').forEach((grupo) => {
+                        const tarjeta = grupo.closest('.card');
+                        const aviso = tarjeta.querySelector('[data-falta="procedencia"]');
+                        const conPersonas = Array.from(tarjeta.querySelectorAll('[data-cantidad]'))
+                            .some((campo) => (parseInt(campo.value, 10) || 0) > 0);
+                        const incompleta = conPersonas && Array.from(grupo.querySelectorAll('select'))
+                            .some((s) => !s.disabled && s.value === '');
+
+                        aviso.hidden = !incompleta;
+                        if (incompleta) avisoProcedencia ??= aviso;
+                    });
+
                     avisoFecha.hidden = !sinFecha;
                     avisoPersonas.hidden = !sinPersonas;
 
-                    if (sinFecha || sinPersonas) {
+                    const primero = sinFecha ? avisoFecha : (sinPersonas ? avisoPersonas : avisoProcedencia);
+
+                    if (primero) {
                         e.preventDefault();
-                        (sinFecha ? avisoFecha : avisoPersonas).scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        primero.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     }
-                });
-
-                // Filtra municipios según el estado elegido en el mismo renglón.
-                form.querySelectorAll('select[name*="[id_estado]"]').forEach((selEstado) => {
-                    const contenedor = selEstado.closest('.grid');
-                    const selMunicipio = contenedor?.querySelector('select[name*="[id_municipio]"]');
-                    if (!selMunicipio) return;
-
-                    const todas = Array.from(selMunicipio.options);
-
-                    selEstado.addEventListener('change', () => {
-                        const idEstado = selEstado.value;
-                        selMunicipio.innerHTML = '';
-                        todas
-                            .filter((o) => o.value === '' || o.dataset.estado === idEstado)
-                            .forEach((o) => selMunicipio.appendChild(o.cloneNode(true)));
-                    });
-
-                    selEstado.dispatchEvent(new Event('change'));
                 });
 
                 recalcular();

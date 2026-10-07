@@ -70,7 +70,7 @@ class CorreosTest extends TestCase
 
         $this->actingAs($cliente, 'cliente')->post('/comprar', [
             'fecha_visita' => $this->fechaVisita,
-            'renglones'    => [['id_rubro' => $this->rubro->id, 'cant_hombre' => 1, 'cant_mujer' => 1]],
+            'renglones'    => [['id_rubro' => $this->rubro->id, 'cant_hombre' => 1, 'cant_mujer' => 1, ...$this->procedencia()]],
         ]);
 
         $compra = Compra::firstOrFail();
@@ -116,6 +116,7 @@ class CorreosTest extends TestCase
             'fecha_nacimiento'      => '1995-03-10',
             'genero'                => 'Mujer',
             'telefono'              => '9610001111',
+            ...$this->procedencia(),
         ]);
 
         Mail::assertQueued(CodigoVerificacion::class);
@@ -164,7 +165,7 @@ class CorreosTest extends TestCase
         $cliente = $this->cliente();
         $this->actingAs($cliente, 'cliente')->post('/comprar', [
             'fecha_visita' => $this->fechaVisita,
-            'renglones'    => [['id_rubro' => $this->rubro->id, 'cant_hombre' => 1, 'cant_mujer' => 0]],
+            'renglones'    => [['id_rubro' => $this->rubro->id, 'cant_hombre' => 1, 'cant_mujer' => 0, ...$this->procedencia()]],
         ]);
 
         $compra = Compra::firstOrFail();

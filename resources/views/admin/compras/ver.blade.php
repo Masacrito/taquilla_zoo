@@ -6,7 +6,7 @@
 @section('contenido')
 
     <a href="{{ route('admin.compras.index') }}" class="mb-4 inline-block text-sm text-jade hover:underline">
-        ← Compras
+        ← Ventas
     </a>
 
     <div class="grid gap-4 lg:grid-cols-3">

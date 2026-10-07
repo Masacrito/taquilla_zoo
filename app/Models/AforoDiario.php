@@ -82,10 +82,31 @@ class AforoDiario extends Model
             ->where('fecha', '>=', now()->toDateString());
     }
 
-    /** Días abiertos de hoy en adelante, para pintar el calendario de compra. */
+    /** Días abiertos de hoy en adelante: lo que opera el zoológico. */
     public function scopeAbiertosDesdeHoy($query)
     {
         return $query->where('fecha', '>=', now()->toDateString())
+            ->where('cerrado', false);
+    }
+
+    /**
+     * La primera fecha para la que todavía se venden boletos: hoy, o mañana
+     * si ya pasó la hora de corte (`taquilla.compra.hora_corte_mismo_dia`).
+     * Es la única respuesta a «¿aún se vende para hoy?»: la leen el
+     * calendario de compra y el registro de la compra.
+     */
+    public static function primerDiaALaVenta(): string
+    {
+        $ahora = now();
+        $corte = $ahora->copy()->setTimeFromTimeString(config('taquilla.compra.hora_corte_mismo_dia'));
+
+        return ($ahora->gte($corte) ? $ahora->copy()->addDay() : $ahora)->toDateString();
+    }
+
+    /** Días abiertos para los que aún se puede comprar: el calendario de compra. */
+    public function scopeALaVenta($query)
+    {
+        return $query->where('fecha', '>=', self::primerDiaALaVenta())
             ->where('cerrado', false);
     }
 }

@@ -11,6 +11,8 @@ export default defineConfig({
                 // Entrada aparte: el lector de QR solo lo carga la pantalla
                 // de accesos, no todo el panel.
                 'resources/js/escaner.js',
+                'resources/js/huella.js',
+                'resources/css/huella.css',
             ],
             refresh: true,
         }),

@@ -33,6 +33,7 @@ class Cliente extends Authenticatable
         'telefono',
         'id_pais',
         'id_estado',
+        'id_municipio',
         'correo_verificado_en',
     ];
 

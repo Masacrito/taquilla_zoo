@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Cliente;
 use App\Models\Pais;
 use App\Models\Estado;
+use App\Models\Municipio;
+use App\Services\Cliente\Procedencia;
 use App\Services\Cliente\VerificacionCorreoService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -19,8 +21,10 @@ use Illuminate\Validation\Rules\Password;
  */
 class ClienteAuthController extends Controller
 {
-    public function __construct(private readonly VerificacionCorreoService $verificacion)
-    {
+    public function __construct(
+        private readonly VerificacionCorreoService $verificacion,
+        private readonly Procedencia $procedencia,
+    ) {
     }
 
     // ═══ Registro ═══
@@ -30,6 +34,7 @@ class ClienteAuthController extends Controller
         return view('publico.auth.registro', [
             'paises'  => Pais::activos()->orderBy('nombre')->get(),
             'estados' => Estado::activos()->orderBy('nombre')->get(),
+            'municipios' => Municipio::activos()->orderBy('nombre')->get(),
         ]);
     }
 
@@ -43,10 +48,14 @@ class ClienteAuthController extends Controller
             'fecha_nacimiento' => ['required', 'date', 'before:today'],
             'genero'           => ['required', 'string', 'max:40'],
             'telefono'         => ['required', 'string', 'max:30'],
-            'id_pais'          => ['nullable', 'exists:paises,id'],
+            // Obligatoria desde 2026-10-05 (estadísticas). Qué tanto se pide
+            // según el país y el estado lo decide Procedencia.
+            'id_pais'          => ['required', 'exists:paises,id'],
             'id_estado'        => ['nullable', 'exists:estados,id'],
+            'id_municipio'     => ['nullable', 'exists:municipios,id'],
         ]);
 
+        $datos  = [...$datos, ...$this->procedencia->exigir($datos)];
         $correo = mb_strtolower(trim($datos['correo']));
 
         // El código se emite ANTES de crear al cliente: si el límite de

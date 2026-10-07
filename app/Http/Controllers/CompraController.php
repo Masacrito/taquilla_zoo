@@ -11,6 +11,7 @@ use App\Models\Pago;
 use App\Models\Pais;
 use App\Models\Rubro;
 use App\Services\Acceso\QrImagenService;
+use App\Services\Cliente\Procedencia;
 use App\Services\Cliente\SesionInvitado;
 use App\Services\Pago\PasarelaPago;
 use App\Services\Venta\CotizarCompraService;
@@ -38,6 +39,7 @@ class CompraController extends Controller
         private readonly RegistrarCompraService $registrador,
         private readonly PasarelaPago $pasarela,
         private readonly SesionInvitado $invitado,
+        private readonly Procedencia $procedencia,
     ) {
     }
 
@@ -45,21 +47,28 @@ class CompraController extends Controller
     {
         $fecha = $request->query('fecha');
 
-        $abiertos = AforoDiario::abiertosDesdeHoy()
+        $abiertos = AforoDiario::aLaVenta()
             ->orderBy('fecha')
             ->get()
             ->map(fn ($dia) => $dia->fecha->toDateString())
             ->flip();
 
+        // Pasada la hora de corte, hoy ya no se vende: el calendario abre con
+        // el siguiente día disponible ya marcado.
+        $ventaDeHoyCerrada = AforoDiario::primerDiaALaVenta() > now()->toDateString();
+
         return view('publico.comprar', [
             'rubros'         => $fecha
                 ? Rubro::vigentes($fecha)->with('tipoAcceso')->orderBy('tipo')->get()
                 : Rubro::vigentes()->with('tipoAcceso')->orderBy('tipo')->get(),
-            'fechaElegida'    => $fecha,
+            'fechaElegida'    => $fecha ?? ($ventaDeHoyCerrada ? $abiertos->keys()->first() : null),
+            'ventaDeHoyCerrada' => $ventaDeHoyCerrada,
             // Solo para quien compra sin cuenta: a dónde llegarán los boletos.
             'correoInvitado'  => Auth::guard('cliente')->check() ? null : $this->invitado->correo(),
             'meses'           => $this->rejillaDeMeses($abiertos),
             'hayDiasAbiertos' => $abiertos->isNotEmpty(),
+            // Con cuenta, la procedencia de cada tarifa arranca con la del perfil.
+            'procedenciaCliente' => Auth::guard('cliente')->user()?->only(['id_pais', 'id_estado', 'id_municipio']) ?? [],
             'paises'   => Pais::activos()->orderBy('nombre')->get(),
             'estados'  => Estado::activos()->orderBy('nombre')->get(),
             'municipios' => Municipio::activos()->orderBy('nombre')->get(),
@@ -86,6 +95,10 @@ class CompraController extends Controller
     public function guardar(Request $request)
     {
         $datos = $this->validarCarrito($request);
+
+        // Solo al comprar, no al cotizar: el total estimado debe poder verse
+        // antes de terminar de llenar la procedencia.
+        $datos['renglones'] = $this->exigirProcedencia($datos['renglones']);
 
         // Se vuelve a cotizar aquí: lo que el navegador vio es irrelevante.
         $cotizacion = $this->cotizador->cotizar($datos['renglones'], $datos['fecha_visita']);
@@ -197,7 +210,10 @@ class CompraController extends Controller
         $tope = (int) config('taquilla.compra.max_por_campo');
 
         return $request->validate([
-            'fecha_visita'                => ['required', 'date', 'after_or_equal:today'],
+            // Pasada la hora de corte ya no se vende para hoy. Se revisa aquí
+            // y no solo en el calendario: el formulario pudo quedarse abierto
+            // desde antes del corte.
+            'fecha_visita'                => ['required', 'date', 'after_or_equal:' . AforoDiario::primerDiaALaVenta()],
             'renglones'                   => ['required', 'array', 'min:1'],
             'renglones.*.id_rubro'        => ['required', 'exists:rubros,id'],
             'renglones.*.cant_hombre'     => ['nullable', 'integer', 'min:0', "max:{$tope}"],
@@ -207,12 +223,29 @@ class CompraController extends Controller
             'renglones.*.id_municipio'    => ['nullable', 'exists:municipios,id'],
         ], [
             'fecha_visita.required' => 'Elige en el calendario el día de tu visita.',
+            'fecha_visita.after_or_equal' => 'La venta de boletos para ese día ya cerró. Elige otro día en el calendario.',
         ], [
             'fecha_visita'            => 'fecha de visita',
             'renglones'               => 'boletos',
             'renglones.*.cant_hombre' => 'cantidad de hombres',
             'renglones.*.cant_mujer'  => 'cantidad de mujeres',
         ]);
+    }
+
+    /**
+     * La procedencia es obligatoria en cada tarifa que lleva personas
+     * (2026-10-05, estadísticas). Las tarifas en cero se dejan como vienen:
+     * el cotizador las descarta.
+     */
+    private function exigirProcedencia(array $renglones): array
+    {
+        foreach ($renglones as $i => $renglon) {
+            if ((int) ($renglon['cant_hombre'] ?? 0) + (int) ($renglon['cant_mujer'] ?? 0) > 0) {
+                $renglones[$i] = [...$renglon, ...$this->procedencia->exigir($renglon, "renglones.{$i}.")];
+            }
+        }
+
+        return $renglones;
     }
 
     /**

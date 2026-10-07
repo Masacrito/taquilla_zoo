@@ -38,3 +38,6 @@ taquilla.md
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Capturas y resultados locales de las pruebas de navegador.
+/output/

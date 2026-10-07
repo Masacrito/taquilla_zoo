@@ -25,6 +25,7 @@
             </a>
 
             <nav class="flex items-center gap-3 text-sm">
+                <a href="{{ route('portal.inicio') }}" class="text-texto-suave hover:text-jade">Inicio</a>
                 @auth('cliente')
                     <a href="{{ route('compras.index') }}" class="text-texto-suave hover:text-jade">Mis compras</a>
                     <a href="{{ route('compras.crear') }}" class="btn-primary btn-sm">Comprar</a>
