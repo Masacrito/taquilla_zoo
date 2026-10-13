@@ -36,17 +36,21 @@ class ExpirarComprasPendientes implements ShouldQueue
             DB::transaction(function () use ($compra, $bitacora, &$expiradas) {
 
                 // Relee con bloqueo: si un webhook la está pagando justo
-                // ahora, no debemos expirarla.
-                $fresca = Compra::query()
+                // ahora, no debemos expirarla. Tampoco si el comprador la
+                // retomó entretanto: eso le reinició el reloj (2026-10-11).
+                $fresca = Compra::pendientesVencidas()
                     ->when(DB::connection()->getDriverName() !== 'sqlite',
                         fn ($q) => $q->lockForUpdate())
                     ->find($compra->id);
 
-                if (! $fresca || ! $fresca->puedeTransicionarA(Compra::EXPIRADA)) {
+                if (! $fresca) {
                     return;
                 }
 
                 $fresca->estado = Compra::EXPIRADA;
+                // Una expirada ya no sirve de nada al visitante: sale sola de
+                // su bandeja para no saturarla.
+                $fresca->archivada_en = now();
                 $fresca->save();
 
                 $bitacora->registrar('compras', BitacoraService::UPDATE, (string) $fresca->id, [

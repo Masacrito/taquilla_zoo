@@ -6,84 +6,13 @@
 @section('contenido')
 
     @can('editar_rubros')
-        <details class="card mb-6" @if ($errors->any()) open @endif>
+        {{-- Solo se abre con errores del alta: los de una edición abren su fila. --}}
+        <details class="card mb-6" @if ($errors->any() && ! old('_rubro')) open @endif>
             <summary class="titulo cursor-pointer text-sm text-jade">+ Nuevo rubro</summary>
 
-            <form method="POST" action="{{ route('admin.rubros.store') }}"
-                  class="mt-5 grid max-w-3xl gap-4 sm:grid-cols-2" data-form-rubro>
-                @csrf
-
-                <div class="sm:col-span-2">
-                    <label class="label">Tipo <span class="text-cinabrio">*</span></label>
-                    <input type="text" name="tipo" class="input" value="{{ old('tipo') }}"
-                           placeholder="Ej. Adulto nacional" required>
-                </div>
-
-                <div class="sm:col-span-2">
-                    <label class="label">Descripción a detalle</label>
-                    <textarea name="descripcion" rows="2" class="input">{{ old('descripcion') }}</textarea>
-                </div>
-
-                <div>
-                    <label class="label">Nacionalidad <span class="text-cinabrio">*</span></label>
-                    <select name="id_nacionalidad" class="input" required>
-                        <option value="">— Seleccionar —</option>
-                        @foreach ($nacionalidades as $n)
-                            <option value="{{ $n->id }}" @selected(old('id_nacionalidad') == $n->id)>{{ $n->nombre }}</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <div>
-                    <label class="label">Subnacionalidad <span class="text-cinabrio">*</span></label>
-                    <select name="id_subnacionalidad" class="input" required>
-                        <option value="">— Seleccionar —</option>
-                        @foreach ($subnacionalidades as $s)
-                            <option value="{{ $s->id }}" @selected(old('id_subnacionalidad') == $s->id)>{{ $s->nombre }}</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <div>
-                    <label class="label">Tipo de acceso <span class="text-cinabrio">*</span></label>
-                    <select name="id_tipo_acceso" class="input" required
-                            data-tipo-acceso data-gratis="{{ $idTipoGratis }}">
-                        <option value="">— Seleccionar —</option>
-                        @foreach ($tiposAcceso as $t)
-                            <option value="{{ $t->id }}" @selected(old('id_tipo_acceso') == $t->id)>{{ $t->nombre }}</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <div>
-                    <label class="label">Precio en pesos <span class="text-cinabrio">*</span></label>
-                    <input type="number" name="precio" step="0.01" min="0" class="input"
-                           value="{{ old('precio', '0.00') }}" required data-precio>
-                    <p class="mt-1 text-[11px] text-texto-suave" data-aviso-gratis hidden>
-                        Un rubro GRATIS siempre cuesta 0.
-                    </p>
-                </div>
-
-                <div>
-                    <label class="label">Vigente desde <span class="text-cinabrio">*</span></label>
-                    <input type="date" name="vigente_desde" class="input"
-                           value="{{ old('vigente_desde', now()->toDateString()) }}" required>
-                </div>
-
-                <div>
-                    <label class="label">Vigente hasta</label>
-                    <input type="date" name="vigente_hasta" class="input" value="{{ old('vigente_hasta') }}">
-                    <p class="mt-1 text-[11px] text-texto-suave">Vacío = sin fecha de término.</p>
-                </div>
-
-                <div class="sm:col-span-2 flex items-center gap-3">
-                    <label class="flex items-center gap-2 text-sm">
-                        <input type="checkbox" name="activo" value="1" class="accent-jade" @checked(old('activo', true))>
-                        Activo
-                    </label>
-                    <button type="submit" class="btn-primary ml-auto">Crear rubro</button>
-                </div>
-            </form>
+            <div class="mt-5">
+                @include('admin.rubros._formulario', ['rubro' => null])
+            </div>
         </details>
     @endcan
 
@@ -147,6 +76,9 @@
                                 @can('editar_rubros')
                                     <td class="px-4 py-3">
                                         <div class="flex flex-wrap gap-2">
+                                            <button type="button" class="btn-outline btn-sm" data-editar="{{ $rubro->id }}">
+                                                Editar
+                                            </button>
                                             <form method="POST" action="{{ route('admin.rubros.toggle', $rubro) }}">
                                                 @csrf @method('PUT')
                                                 <button type="submit" class="btn-outline btn-sm">
@@ -162,6 +94,17 @@
                                     </td>
                                 @endcan
                             </tr>
+                            @can('editar_rubros')
+                                {{-- Fila de edición: oculta hasta pulsar «Editar», o
+                                     abierta si este rubro volvió con errores. --}}
+                                <tr class="border-b border-borde bg-fondo" data-edicion="{{ $rubro->id }}"
+                                    @unless ($errors->any() && old('_rubro') == $rubro->id) hidden @endunless>
+                                    <td colspan="7" class="px-4 py-5">
+                                        <p class="titulo mb-4 text-xs text-jade">Editar «{{ $rubro->tipo }}»</p>
+                                        @include('admin.rubros._formulario', ['rubro' => $rubro])
+                                    </td>
+                                </tr>
+                            @endcan
                         @endforeach
                     </tbody>
                 </table>
@@ -170,7 +113,8 @@
     @endif
 
     <p class="mt-4 text-xs text-texto-suave">
-        Cambiar un precio no altera compras anteriores: el importe se congela al momento de comprar.
+        Editar un rubro o cambiar su precio no altera compras anteriores: el nombre y el importe se
+        congelan al momento de comprar.
     </p>
 
     <script>
@@ -195,6 +139,14 @@
 
             selector.addEventListener('change', sincronizar);
             sincronizar();
+        });
+
+        // «Editar» muestra u oculta la fila de edición de ese rubro.
+        document.querySelectorAll('[data-editar]').forEach((boton) => {
+            boton.addEventListener('click', () => {
+                const fila = document.querySelector(`[data-edicion="${boton.dataset.editar}"]`);
+                fila.hidden = !fila.hidden;
+            });
         });
     </script>
 @endsection

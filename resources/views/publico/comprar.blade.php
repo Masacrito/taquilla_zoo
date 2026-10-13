@@ -43,7 +43,7 @@
         <form method="POST" action="{{ route('compras.guardar') }}" data-form-compra>
             @csrf
 
-            <div class="card mb-6" data-calendario>
+            <div class="card mb-6" data-calendario data-hoy="{{ now()->toDateString() }}">
                 <label class="label">Fecha de visita</label>
 
                 @if ($ventaDeHoyCerrada)
@@ -104,6 +104,14 @@
                 </div>
 
                 <p class="mt-3 text-sm" data-fecha-elegida></p>
+
+                {{-- Solo al elegir el día de hoy: quien compra para hoy debe
+                     saber que el boleto no sirve para otro día y hasta qué
+                     hora entra. --}}
+                <p class="mt-2 rounded-badge bg-arena/25 px-3 py-2 text-xs text-texto" data-aviso-hoy hidden>
+                    Estás comprando para <strong>hoy</strong>. El zoológico cierra a las {{ config('taquilla.horario.cierre') }} hrs y la
+                    venta en línea para hoy termina a las {{ config('taquilla.compra.hora_corte_mismo_dia') }} hrs.
+                </p>
 
                 {{-- El aviso va junto al calendario, no solo arriba de la página:
                      quien llega hasta el botón de pago ya no ve el encabezado. --}}
@@ -257,6 +265,8 @@
                         leyenda.textContent = fecha
                             ? 'Visita: ' + formato.format(new Date(fecha + 'T12:00:00'))
                             : '';
+
+                        caja.querySelector('[data-aviso-hoy]').hidden = fecha !== caja.dataset.hoy;
                     };
 
                     caja.addEventListener('click', (e) => {

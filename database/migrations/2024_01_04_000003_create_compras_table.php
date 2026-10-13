@@ -50,6 +50,12 @@ return new class extends Migration {
             $table->timestampTz('recordatorio_vispera_en')->nullable();
             $table->timestampTz('recordatorio_dia_en')->nullable();
 
+            // Agregado 2026-10-11 (archivar en «Mis compras»). Cuándo salió de
+            // la bandeja del visitante; NULL = a la vista. No es un estado: la
+            // compra sigue igual para el panel, los cortes y el acceso. Las
+            // expiradas se archivan solas. Ver Compra::esArchivable().
+            $table->timestampTz('archivada_en')->nullable();
+
             $table->timestampsTz();
             $table->softDeletesTz();
 

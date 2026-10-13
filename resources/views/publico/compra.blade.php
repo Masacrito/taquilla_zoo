@@ -49,6 +49,12 @@
                 <p class="mt-3 text-sm text-texto-suave">
                     El código QR se emite cuando el banco confirma el pago.
                 </p>
+                {{-- urlPagar() resuelve sola la ruta con sesión o la firmada
+                     del invitado. --}}
+                <form method="POST" action="{{ $compra->urlPagar() }}" class="mt-5">
+                    @csrf
+                    <button type="submit" class="btn-primary w-full">Pagar ahora</button>
+                </form>
             </div>
         @endif
 

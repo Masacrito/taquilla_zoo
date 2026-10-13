@@ -64,6 +64,7 @@ class Compra extends Model
             'qr_expira_en'   => 'datetime',
             'recordatorio_vispera_en' => 'datetime',
             'recordatorio_dia_en'     => 'datetime',
+            'archivada_en'            => 'datetime',
         ];
     }
 
@@ -127,6 +128,12 @@ class Compra extends Model
         return $this->urlDelComprador('retorno');
     }
 
+    /** A dónde se envía (POST) el botón «Pagar» de una compra pendiente. */
+    public function urlPagar(): string
+    {
+        return $this->urlDelComprador('pagar');
+    }
+
     private function urlDelComprador(string $pantalla): string
     {
         return $this->esDeInvitado()
@@ -142,6 +149,26 @@ class Compra extends Model
     public function estaPagada(): bool
     {
         return in_array($this->estado, [self::PAGADA, self::ACCESO_PARCIAL], true);
+    }
+
+    public function estaPendiente(): bool
+    {
+        return $this->estado === self::PENDIENTE_PAGO;
+    }
+
+    // ═══ Archivar (2026-10-11) ═══
+    //
+    // Archivar solo saca la compra de la bandeja del visitante. Una compra
+    // con QR vigente no se archiva: nadie debe esconder su boleto por error.
+
+    public function esArchivable(): bool
+    {
+        return ! $this->estaPagada();
+    }
+
+    public function estaArchivada(): bool
+    {
+        return $this->archivada_en !== null;
     }
 
     public function pasesDisponibles(): int
@@ -173,6 +200,21 @@ class Compra extends Model
             ]);
 
         return $filas > 0;
+    }
+
+    /**
+     * La compra sin pagar que este comprador tiene abierta, si hay una. Con
+     * cuenta se busca por la cuenta; como invitado, por el correo verificado.
+     * Las dos formas de comprar no se mezclan: cada una se retoma por su vía.
+     */
+    public function scopePendienteDe($query, ?string $idCliente, ?string $correoInvitado)
+    {
+        return $query->where('estado', self::PENDIENTE_PAGO)
+            ->when(
+                $correoInvitado !== null,
+                fn ($q) => $q->where('correo_invitado', $correoInvitado),
+                fn ($q) => $q->where('id_cliente', $idCliente)->whereNull('correo_invitado'),
+            );
     }
 
     public function scopePendientesVencidas($query)

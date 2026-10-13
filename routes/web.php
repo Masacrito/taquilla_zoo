@@ -97,6 +97,8 @@ Route::middleware('signed')->prefix('compra/{folio}')->name('invitado.')->group(
     Route::get('/',        [CompraController::class, 'ver'])->name('ver');
     Route::get('/qr',      [CompraController::class, 'qr'])->name('qr');
     Route::get('/retorno', [CompraController::class, 'retorno'])->name('retorno');
+    // Cada intento abre un cobro en la pasarela: se limita igual que con sesión.
+    Route::post('/pagar',  [CompraController::class, 'pagar'])->middleware('throttle:10,1')->name('pagar');
 });
 
 // === COMPRAS DEL CLIENTE (requieren sesión) ===
@@ -109,6 +111,15 @@ Route::middleware(['guard.exclusivo:cliente', 'auth:cliente'])->group(function (
     Route::get('/mis-compras',              [CompraController::class, 'index'])->name('compras.index');
     Route::get('/mis-compras/{folio}',      [CompraController::class, 'ver'])->name('compras.ver');
     Route::get('/mis-compras/{folio}/qr',   [CompraController::class, 'qr'])->name('compras.qr');
+
+    // Retomar el pago de una pendiente y ordenar la bandeja (2026-10-11).
+    // Cada intento abre un cobro en la pasarela: 10 por minuto sobran para
+    // una persona y frenan a un script.
+    Route::post('/mis-compras/{folio}/pagar',       [CompraController::class, 'pagar'])
+        ->middleware('throttle:10,1')
+        ->name('compras.pagar');
+    Route::post('/mis-compras/{folio}/archivar',    [CompraController::class, 'archivar'])->name('compras.archivar');
+    Route::post('/mis-compras/{folio}/desarchivar', [CompraController::class, 'desarchivar'])->name('compras.desarchivar');
 });
 
 // === PASARELA SIMULADA (solo local/testing; el controlador se apaga solo) ===

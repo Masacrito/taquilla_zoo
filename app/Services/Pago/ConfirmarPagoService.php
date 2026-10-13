@@ -116,17 +116,34 @@ class ConfirmarPagoService
                         fn ($q) => $q->lockForUpdate())
                     ->findOrFail($compra->id);
 
-                if (! $fresca->puedeTransicionarA(Compra::PAGADA)) {
-                    // Ya estaba pagada, o está expirada/cancelada. No es error.
+                $this->registrarPago($fresca, $notificacion, $proveedor, Pago::APROBADO);
+
+                // Solo una compra PENDIENTE se convierte en pagada. No se usa
+                // puedeTransicionarA(): pagada → pagada existe para reagendar,
+                // y aquí dejaría pasar un segundo cobro de la misma compra
+                // (una compra puede tener varios cobros abiertos desde que se
+                // retoma y se paga después, 2026-10-11).
+                if (! $fresca->estaPendiente()) {
+                    // El banco cobró algo que ya no entrega boleto: la compra
+                    // ya estaba pagada con otro cobro, o expiró. El pago queda
+                    // como aprobado —es lo que pasó— y a la vista para devolverlo.
+                    Log::error('Pago aprobado sobre una compra que ya no está pendiente: requiere reembolso', [
+                        'referencia' => $notificacion->referenciaExterna,
+                        'compra'     => $fresca->folio,
+                        'estado'     => $fresca->estado,
+                        'monto'      => $notificacion->montoCentavos,
+                    ]);
+
                     return;
                 }
-
-                $this->registrarPago($fresca, $notificacion, $proveedor, Pago::APROBADO);
 
                 $fresca->estado       = Compra::PAGADA;
                 $fresca->qr_token     = $this->qr->generar($fresca);
                 // El QR deja de servir al cerrar el día de la visita.
                 $fresca->qr_expira_en = $fresca->fecha_visita->copy()->endOfDay();
+                // Si estaba archivada como pendiente, ahora trae un QR: vuelve
+                // a la bandeja.
+                $fresca->archivada_en = null;
                 $fresca->save();
 
                 $this->bitacora->registrar('compras', BitacoraService::UPDATE, (string) $fresca->id, [

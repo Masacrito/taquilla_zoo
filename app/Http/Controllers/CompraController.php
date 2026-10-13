@@ -115,18 +115,37 @@ class CompraController extends Controller
             return back()->withInput()->with('error', $e->getMessage());
         }
 
-        // Alta del cobro en la pasarela y registro del pago iniciado.
-        $cobro = $this->pasarela->crearCobro($compra);
+        return $this->irAPagar($compra);
+    }
 
-        Pago::create([
-            'id_compra'          => $compra->id,
-            'proveedor'          => config('taquilla.pago.pasarela'),
-            'referencia_externa' => $cobro->referenciaExterna,
-            'monto_centavos'     => $cobro->montoCentavos,
-            'estado'             => Pago::INICIADO,
-        ]);
+    /**
+     * Botón «Pagar» de una compra que se quedó pendiente (2026-10-11).
+     *
+     * El reloj de los 15 minutos se reinicia en la misma sentencia que
+     * comprueba el estado: si el job de expiración ganó la carrera, aquí no
+     * se actualiza ninguna fila y no se cobra una compra ya expirada.
+     */
+    public function pagar(string $folio)
+    {
+        $compra = $this->compraAutorizada($folio);
 
-        return redirect()->away($cobro->urlRedireccion);
+        // Retomar no salta el calendario: si el día cerró o ya pasó la hora
+        // de corte desde que se armó el carrito, toca elegir otra fecha.
+        if (! AforoDiario::aLaVenta()->where('fecha', $compra->fecha_visita->toDateString())->exists()) {
+            return redirect()->to($compra->urlDetalle())
+                ->with('error', 'La venta de boletos para ese día ya cerró. Vuelve a comprar eligiendo otra fecha.');
+        }
+
+        $retomada = Compra::whereKey($compra->id)
+            ->where('estado', Compra::PENDIENTE_PAGO)
+            ->update(['fecha_compra' => now()]);
+
+        if (! $retomada) {
+            return redirect()->to($compra->urlDetalle())
+                ->with('error', 'Esta compra ya no está pendiente de pago.');
+        }
+
+        return $this->irAPagar($compra);
     }
 
     /**
@@ -143,13 +162,48 @@ class CompraController extends Controller
         return view('publico.retorno', ['compra' => $compra]);
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $compras = Compra::where('id_cliente', Auth::guard('cliente')->id())
-            ->orderByDesc('fecha_compra')
-            ->paginate(20);
+        $archivadas = $request->boolean('archivadas');
 
-        return view('publico.mis-compras', ['compras' => $compras]);
+        $compras = Compra::where('id_cliente', Auth::guard('cliente')->id())
+            ->when(
+                $archivadas,
+                fn ($q) => $q->whereNotNull('archivada_en'),
+                fn ($q) => $q->whereNull('archivada_en'),
+            )
+            ->orderByDesc('fecha_compra')
+            ->paginate(20)
+            ->withQueryString();
+
+        return view('publico.mis-compras', ['compras' => $compras, 'archivadas' => $archivadas]);
+    }
+
+    /**
+     * Saca la compra de la bandeja del visitante, o la regresa. No cambia su
+     * estado ni la borra: el panel, los cortes y el acceso la ven igual.
+     */
+    public function archivar(string $folio)
+    {
+        $compra = $this->compraAutorizada($folio);
+
+        // Con QR vigente no se archiva: es el boleto.
+        abort_unless($compra->esArchivable(), 422);
+
+        $compra->archivada_en = now();
+        $compra->save();
+
+        return back()->with('success', "La compra {$compra->folio} se archivó.");
+    }
+
+    public function desarchivar(string $folio)
+    {
+        $compra = $this->compraAutorizada($folio);
+
+        $compra->archivada_en = null;
+        $compra->save();
+
+        return back()->with('success', "La compra {$compra->folio} volvió a tus compras.");
     }
 
     public function ver(string $folio)
@@ -177,6 +231,32 @@ class CompraController extends Controller
     }
 
     // === Apoyo ===
+
+    /**
+     * Alta del cobro en la pasarela, registro del pago iniciado y salida
+     * hacia el banco. Cada intento genera un cobro nuevo; uno anterior que
+     * ya no corresponda al carrito lo detiene el webhook, que compara el
+     * monto contra el total vigente de la compra (brief §4.4).
+     *
+     * shortcut: el cobro anterior no se cancela en la pasarela, solo deja de
+     * servir aquí; con la simulada no se mueve dinero. Al conectar el banco
+     * real (Fase 4): cancelarlo antes de crear el nuevo, o alguien podrá
+     * pagar un cobro viejo que ya no entrega boleto.
+     */
+    private function irAPagar(Compra $compra)
+    {
+        $cobro = $this->pasarela->crearCobro($compra);
+
+        Pago::create([
+            'id_compra'          => $compra->id,
+            'proveedor'          => config('taquilla.pago.pasarela'),
+            'referencia_externa' => $cobro->referenciaExterna,
+            'monto_centavos'     => $cobro->montoCentavos,
+            'estado'             => Pago::INICIADO,
+        ]);
+
+        return redirect()->away($cobro->urlRedireccion);
+    }
 
     /**
      * La compra que esta petición tiene derecho a ver. Un folio ajeno

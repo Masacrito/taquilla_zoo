@@ -37,11 +37,11 @@
             <p class="zoo-eyebrow">01 / Cada paso se comparte</p>
             <h2>Un encuentro.<br><em>Para todos.</em></h2>
             <p class="zoo-lead">Elige tu tipo de visitante.</p>
-            <p>Adulto Nacional · Extranjero · Niño · Niño Pavón · Tercera edad · Estudiante.</p>
+            <p>Acceso General · Nacional o Extranjero · Niños · Tercera edad.</p>
             <details class="zoo-rates"><summary>Consultar tarifas vigentes <span aria-hidden="true">＋</span></summary>
                 <dl>@forelse($rubros as $rubro)<div><dt>{{ $rubro->tipo }}</dt><dd>{{ $rubro->esGratis() ? 'Gratis' : $rubro->precioFormateado() }}</dd></div>@empty<div><dt>Consulta la disponibilidad al comprar.</dt></div>@endforelse</dl>
             </details>
-            <p class="zoo-note">Tu tipo de visitante se valida en la entrada: INAPAM para tercera edad, credencial para estudiantes y máximo 1.20 m para Niño Pavón gratis.</p>
+            <p class="zoo-note">Tu tipo de visitante se valida en la entrada: Extranjero, Nacional, Niños e INAPAM para tercera edad.</p>
             <a class="zoo-text-link" href="{{ route('compras.crear') }}">Elegir mis boletos <span aria-hidden="true">↗</span></a>
         </div>
     </section>
