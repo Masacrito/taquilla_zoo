@@ -38,7 +38,7 @@
             <p class="zoo-eyebrow">01 / Cada paso se comparte</p>
             <h2>Un encuentro.<br><em>Para todos.</em></h2>
             <p class="zoo-lead">Elige tu tipo de visitante.</p>
-            <p>Acceso General · Nacional o Extranjero · Niños · Tercera edad.</p>
+            <p>{{ $rubros->isNotEmpty() ? $rubros->pluck('tipo')->unique()->implode(' · ').'.' : 'Acceso General · Nacional o Extranjero · Niños · Tercera edad.' }}</p>
             <details class="zoo-rates"><summary>Consultar tarifas vigentes <span aria-hidden="true">＋</span></summary>
                 <dl>@forelse($rubros as $rubro)<div><dt>{{ $rubro->tipo }}</dt><dd>{{ $rubro->esGratis() ? 'Gratis' : $rubro->precioFormateado() }}</dd></div>@empty<div><dt>Consulta la disponibilidad al comprar.</dt></div>@endforelse</dl>
             </details>

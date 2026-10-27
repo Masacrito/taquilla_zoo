@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Compra tu acceso al ZooMAT desde casa, recibe tu QR por correo y preséntalo en el torniquete.">
     <title>Compra tu acceso desde casa — ZooMAT</title>
+    <link rel="icon" href="{{ asset('favicon.ico') }}">
     @vite(['resources/css/app.css', 'resources/css/huella.css', 'resources/js/huella.js'])
 </head>
 <body class="zoo-experience">

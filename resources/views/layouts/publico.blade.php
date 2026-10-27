@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('titulo') — ZooMAT</title>
+    <link rel="icon" href="{{ asset('favicon.ico') }}">
 
     {{-- Marca el documento antes de que se aplique la hoja de estilos. El CSS
          solo esconde los bloques que aparecen al hacer scroll si esta marca

@@ -88,6 +88,15 @@ class PortalCompraTest extends TestCase
             ->assertSee('Lunes cerrado');
     }
 
+    public function test_la_portada_lista_los_tipos_de_visitante_de_los_rubros_vigentes(): void
+    {
+        $this->get('/')->assertOk()->assertSee('<p>Adulto nacional.</p>', false);
+
+        // Sin rubros vigentes queda el texto que pidió el cliente.
+        $this->rubro->delete();
+        $this->get('/')->assertOk()->assertSee('Acceso General · Nacional o Extranjero · Niños · Tercera edad.');
+    }
+
     public function test_la_portada_acompana_la_compra_con_la_huella(): void
     {
         $respuesta = $this->get('/')->assertOk();
