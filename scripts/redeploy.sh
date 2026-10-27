@@ -55,7 +55,7 @@ git --no-pager log --oneline "$PREV..$NEXT" || true
 # --- Respaldo previo (las migraciones corren al arrancar app) ---
 if [ "$BACKUP" -eq 1 ] && docker ps --format '{{.Names}}' | grep -qx taquilla_db; then
   log "Respaldo previo de la base"
-  BACKUP_TAG="predeploy" "$ROOT/scripts/backup.sh"
+  BACKUP_TAG="predeploy" bash "$ROOT/scripts/backup.sh"
 fi
 
 log "git pull ($PREV → $NEXT)"
