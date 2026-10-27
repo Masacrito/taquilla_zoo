@@ -1,5 +1,17 @@
 # Despliegue en contenedores — Taquilla ZooMAT
 
+Producción: **https://semahnchiapas.com.mx/taquilla** (VPS de Hostinger).
+
+```
+Internet :80/:443 → Caddy (repo semahn-infra en /var/www/proxy, HTTPS automático)
+                      └─ red "proxy" → nginx (alias taquilla-web) → app / queue / scheduler → db
+```
+
+Caddy quita `/taquilla` y manda `X-Forwarded-*`; Laravel confía en ellas solo
+si vienen de una red privada de Docker (`bootstrap/app.php`). Así arma las URL
+con https y `/taquilla`, ve la IP real del visitante y los enlaces firmados de
+invitado validan.
+
 Entorno de pruebas tipo producción. Todo lo de aquí se levantó y se probó de
 punta a punta antes de escribirse: compra, pago simulado, webhook, generación
 del QR, correo del comprobante con su PDF, y expiración programada.
@@ -7,7 +19,18 @@ del QR, correo del comprobante con su PDF, y expiración programada.
 ## Requisitos
 
 - Docker Engine >= 24 y Docker Compose >= 2.20
-- Un proxy que termine TLS delante (nginx, Caddy o Traefik en el host)
+- El proxy compartido arriba (repo `semahn-infra` en `/var/www/proxy`). Crea la
+  red externa `proxy`; sin ella este compose no levanta.
+- El repo clonado en `/var/www/taquilla`.
+
+Para probar en tu compu sin el proxy: `docker network create proxy` una vez, y
+un `compose.override.yaml` (ignorado por git) con:
+
+```yaml
+services:
+  nginx:
+    ports: ["8080:80"]
+```
 
 ## Qué levanta
 
@@ -49,14 +72,14 @@ APP_NAME="Taquilla ZooMAT"
 APP_ENV=staging            # habilita la pasarela simulada sin abrir producción
 APP_DEBUG=false            # jamás true: los errores muestran credenciales
 APP_KEY=                   # se genera abajo
-APP_URL=https://tu-dominio-real.mx
+APP_URL=https://semahnchiapas.com.mx/taquilla   # con la carpeta: de aquí salen los enlaces del correo
 APP_TIMEZONE=America/Mexico_City
 APP_LOCALE=es_MX
 APP_FALLBACK_LOCALE=en
 LOG_CHANNEL=stack
 LOG_LEVEL=warning
 
-APP_PORT=8080              # detrás de un proxy con TLS
+DOMAIN=semahnchiapas.com.mx/taquilla   # solo lo usa scripts/redeploy.sh para verificar
 
 # `db` es el servicio de compose, no un host externo.
 # Contraseña ALFANUMÉRICA: compose interpola `$` y una con símbolos
@@ -73,6 +96,7 @@ DB_PASSWORD=
 SESSION_DRIVER=database
 SESSION_LIFETIME=120
 SESSION_SECURE_COOKIE=true     # con TLS delante
+SESSION_PATH=/taquilla         # la cookie no se cruza con otros sistemas del dominio
 QUEUE_CONNECTION=database
 CACHE_STORE=database
 BROADCAST_CONNECTION=log
@@ -206,9 +230,23 @@ docker compose down -v                    # ⚠️ BORRA la base y los archivos
 ### Redesplegar una versión nueva
 
 ```bash
-git pull
-docker compose up -d --build
+./scripts/redeploy.sh              # respaldo previo → pull → build → up → healthchecks
+./scripts/redeploy.sh --force      # reconstruir aunque no haya commits nuevos
+./scripts/redeploy.sh --no-backup
 ```
+
+Logs de cada deploy en `storage/deploy-logs/`. Al final imprime el commit
+anterior y el comando de rollback.
+
+### Respaldo automático
+
+```bash
+sudo crontab -e
+0 2 * * * /var/www/taquilla/scripts/backup.sh >> /var/log/taquilla-backup.log 2>&1
+```
+
+Guarda en `/var/backups/taquilla` (fuera del repo), 14 días, junto con una
+copia de `.env.docker` (la `APP_KEY` es la que valida los QR).
 
 Las migraciones corren solas en el arranque de `app`. El worker tiene 130 s
 de gracia para terminar el job en curso antes de morir, así que un
@@ -240,10 +278,11 @@ recorrido completo funciona.
       muestran las credenciales de la base.
 - [ ] Contraseña de `admin` anotada y cambiada desde el panel.
 - [ ] TLS terminado en el proxy del host, y `SESSION_SECURE_COOKIE=true`.
-- [ ] `APP_URL` con el dominio real: de ahí salen los enlaces del correo y
-      el callback de Google.
-- [ ] El puerto de `APP_PORT` **no** abierto directo a internet; que pase
-      por el proxy.
+- [ ] `APP_URL` con el dominio real y `/taquilla`: de ahí salen los enlaces
+      del correo y el callback de Google. Da de alta
+      `https://semahnchiapas.com.mx/taquilla/auth/google/callback` en la
+      consola de Google.
+- [ ] Ningún servicio con `ports:` en el servidor; solo Caddy publica 80/443.
 - [ ] `MAIL_PASSWORD` con la contraseña de aplicación, y
       `taquilla:probar-correo` pasando.
 
@@ -278,3 +317,31 @@ Si sí, sácalos antes con `pg_dump`.
 **El healthcheck de nginx falla pero el sitio responde.** Tiene que apuntar a
 `127.0.0.1`, no a `localhost`: dentro del contenedor eso resuelve primero a
 IPv6 y nginx solo escucha en IPv4.
+
+## Migrar desde EC2 al VPS
+
+Lo que hay que llevarse: la base, los archivos de `storage/app` y la **misma
+`APP_KEY`** (si cambia, ningún QR vendido vuelve a validar).
+
+En EC2 (los nombres de contenedor son fijos):
+
+```bash
+docker exec taquilla_db sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" --no-owner --no-acl' | gzip > taquilla_ec2.sql.gz
+docker cp taquilla_app:/var/www/storage/app - | gzip > storage_app.tar.gz
+# copia también el .env.docker de EC2
+```
+
+En el VPS, con el proxy ya arriba y el `.env.docker` armado (APP_KEY de EC2,
+`APP_URL`, `SESSION_PATH` y `DOMAIN` de arriba):
+
+```bash
+cd /var/www/taquilla
+docker compose --env-file .env.docker up -d db                 # solo la base, vacía
+gunzip -c taquilla_ec2.sql.gz | docker exec -i taquilla_db sh -c 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
+docker compose --env-file .env.docker up -d --build             # app migra solo lo nuevo
+gunzip -c storage_app.tar.gz | docker cp - taquilla_app:/var/www/storage/
+```
+
+No corras `db:seed` sobre una base restaurada: ya trae roles, catálogos y
+tarifas.
+

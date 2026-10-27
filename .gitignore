@@ -41,3 +41,4 @@ Thumbs.db
 
 # Capturas y resultados locales de las pruebas de navegador.
 /output/
+compose.override.yaml

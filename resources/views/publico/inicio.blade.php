@@ -2,7 +2,8 @@
 @section('experiencia')
 <main id="recorrido" class="zoo-journey" data-sculpture-journey data-model="{{ asset('models/huella/huella.glb') }}" data-draco="{{ asset('vendor/draco/') }}/">
     <div class="zoo-stage" data-stage>
-        <div class="zoo-atmosphere" aria-hidden="true"></div>
+        {{-- La imagen va por asset() y no en el CSS: con /taquilla, una url('/images/...') apuntaría a la raíz del dominio. --}}
+        <div class="zoo-atmosphere" style="--atmosfera: url('{{ asset('images/jaguar-moteado.webp') }}')" aria-hidden="true"></div>
         <img class="zoo-poster" data-poster src="{{ asset('models/huella/poster.webp') }}" width="1200" height="1200" fetchpriority="high" alt="Huella escultórica de jaguar con cinco almohadillas separables de jade y piedra arena.">
         <div class="zoo-ground-shadow" data-shadow aria-hidden="true"></div>
         <canvas class="zoo-canvas" data-canvas aria-label="Huella interactiva: arrastra para girarla o utiliza los controles de la escena"></canvas>

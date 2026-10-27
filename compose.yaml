@@ -1,5 +1,9 @@
 # ─────────────────────────────────────────────────────────────────────────
-#  Taquilla ZooMAT — entorno de pruebas tipo producción
+#  Taquilla ZooMAT — https://semahnchiapas.com.mx/taquilla (VPS Hostinger)
+#
+#  Requiere el proxy compartido arriba primero (repo semahn-infra en
+#  /var/www/proxy): él crea la red externa `proxy`, termina el HTTPS y le
+#  pasa /taquilla a nginx. Ningún servicio de aquí publica puertos.
 #
 #  Los tres servicios que esta aplicación necesita y que se olvidan fácil
 #  —worker de colas, scheduler y las extensiones de PHP— están declarados
@@ -9,6 +13,8 @@
 #    · sin scheduler → las compras sin pagar no expiran nunca
 #    · sin ext-gd    → truena al generar el QR, cuando alguien ya pagó
 # ─────────────────────────────────────────────────────────────────────────
+
+name: taquilla
 
 x-app: &app
   build:
@@ -60,8 +66,8 @@ services:
     image: taquilla-zoomat-web:staging
     container_name: taquilla_nginx
     restart: always
-    ports:
-      - "${APP_PORT:-8080}:80"
+    # Sin `ports`: solo Caddy le habla, por la red `proxy`. Para probar en tu
+    # compu, un compose.override.yaml (ignorado por git) con ports: ["8080:80"].
     depends_on:
       app:
         condition: service_healthy
@@ -77,7 +83,10 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
-    networks: [taquilla]
+    networks:
+      taquilla:
+      proxy:
+        aliases: [taquilla-web]   # Caddy lo encuentra con este nombre
 
   # El comprobante con el QR se encola. Sin este servicio la compra se paga,
   # el QR se guarda... y el correo no sale nunca, sin error en ningún lado.
@@ -136,3 +145,5 @@ volumes:
 networks:
   taquilla:
     driver: bridge
+  proxy:
+    external: true   # la crea el proxy compartido (semahn-infra)

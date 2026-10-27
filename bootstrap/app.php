@@ -45,6 +45,14 @@ return Application::configure(basePath: dirname(__DIR__))
             prepend: \App\Http\Middleware\EnsureGuardExclusivo::class,
         );
 
+        // En el VPS corre detrás de Caddy en /taquilla (repo semahn-infra), que
+        // quita el prefijo y manda X-Forwarded-For/Proto/Host/Prefix. Confiar
+        // solo en redes privadas de Docker: así Laravel arma las URL públicas
+        // con https y /taquilla, ve la IP real del visitante (throttle) y los
+        // enlaces firmados de invitado validan. Un cliente de internet no
+        // puede falsear estas cabeceras porque su IP no es privada.
+        $middleware->trustProxies(at: ['10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16']);
+
         // El banco no manda token CSRF. La autenticidad del webhook la da la
         // firma HMAC que verifica la pasarela, no la sesión.
         $middleware->validateCsrfTokens(except: [
