@@ -19,24 +19,23 @@ use Illuminate\Validation\ValidationException;
  *
  * Lo que no aplica se devuelve en null aunque el navegador lo haya mandado,
  * para no guardar combinaciones imposibles («Francia, Chiapas»). La regla la
- * comparten el registro, el alta con Google y cada renglón de la compra; los
+ * comparten el registro, el alta con Google y la compra; los
  * selectores (componente `x-procedencia`) solo la reflejan.
  */
 class Procedencia
 {
     /**
-     * @param  string  $prefijo  Para ubicar el error: 'renglones.0.' en la compra.
      * @return array{id_pais:int, id_estado:?int, id_municipio:?int}
      *
      * @throws ValidationException
      */
-    public function exigir(array $datos, string $prefijo = ''): array
+    public function exigir(array $datos): array
     {
         $pais = Pais::activos()->find($this->entero($datos['id_pais'] ?? null));
 
         if (! $pais) {
             throw ValidationException::withMessages([
-                "{$prefijo}id_pais" => 'Indica el país de procedencia.',
+                'id_pais' => 'Indica el país de procedencia.',
             ]);
         }
 
@@ -50,7 +49,7 @@ class Procedencia
 
         if (! $estado) {
             throw ValidationException::withMessages([
-                "{$prefijo}id_estado" => 'Indica el estado de procedencia.',
+                'id_estado' => 'Indica el estado de procedencia.',
             ]);
         }
 
@@ -66,7 +65,7 @@ class Procedencia
 
         if ($idMunicipio === null || ! $municipios->whereKey($idMunicipio)->exists()) {
             throw ValidationException::withMessages([
-                "{$prefijo}id_municipio" => "Indica el municipio de {$estado->nombre}.",
+                'id_municipio' => "Indica el municipio de {$estado->nombre}.",
             ]);
         }
 

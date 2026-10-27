@@ -23,6 +23,12 @@ return new class extends Migration {
             $table->string('tipo', 80);              // descripción corta
             $table->text('descripcion')->nullable(); // descripción a detalle
 
+            // Agregado 2026-10-27: lo que la persona debe presentar en el
+            // acceso («Presenta credencial INAPAM»). Las advertencias del
+            // portal, el comprobante y el PDF se arman con el de los rubros
+            // vigentes, así que dar de baja un rubro quita su línea sola.
+            $table->string('requisito', 160)->nullable();
+
             $table->foreignId('id_nacionalidad')->constrained('nacionalidades')->restrictOnDelete();
             $table->foreignId('id_subnacionalidad')->constrained('subnacionalidades')->restrictOnDelete();
             $table->foreignId('id_tipo_acceso')->constrained('tipos_acceso')->restrictOnDelete();

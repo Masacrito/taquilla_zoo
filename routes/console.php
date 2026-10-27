@@ -38,15 +38,18 @@ Schedule::job(new GenerarCalendario())
     ->withoutOverlapping()
     ->name('generar-calendario');
 
-// Recordatorios de visita (2026-10-05): la tarde anterior y la mañana del
-// mismo día. Cada uno corre una vez; las horas salen de la configuración.
+// Recordatorios de visita (2026-10-05): la tarde anterior, una vez, y el
+// mismo día cada 15 minutos desde la hora configurada hasta el corte de venta
+// (2026-10-27), para alcanzar también a quien compra esa mañana. Cada compra
+// recibe cada aviso una sola vez; el job lo garantiza.
 Schedule::job(new EnviarRecordatoriosDeVisita(EnviarRecordatoriosDeVisita::VISPERA))
     ->dailyAt(config('taquilla.recordatorios.vispera'))
     ->withoutOverlapping()
     ->name('recordatorios-vispera');
 
 Schedule::job(new EnviarRecordatoriosDeVisita(EnviarRecordatoriosDeVisita::MISMO_DIA))
-    ->dailyAt(config('taquilla.recordatorios.mismo_dia'))
+    ->everyFifteenMinutes()
+    ->between(config('taquilla.recordatorios.mismo_dia'), config('taquilla.compra.hora_corte_mismo_dia'))
     ->withoutOverlapping()
     ->name('recordatorios-mismo-dia');
 

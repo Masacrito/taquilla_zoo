@@ -107,11 +107,21 @@
 
                 {{-- Solo al elegir el día de hoy: quien compra para hoy debe
                      saber que el boleto no sirve para otro día y hasta qué
-                     hora entra. --}}
-                <p class="mt-2 rounded-badge bg-arena/25 px-3 py-2 text-xs text-texto" data-aviso-hoy hidden>
-                    Estás comprando para <strong>hoy</strong>. El zoológico cierra a las {{ config('taquilla.horario.cierre') }} hrs y la
-                    venta en línea para hoy termina a las {{ config('taquilla.compra.hora_corte_mismo_dia') }} hrs.
-                </p>
+                     hora entra. Con tono de alerta (2026-10-27): en arena
+                     pálido pasaba de largo. --}}
+                <div class="mt-3 flex gap-3 rounded-badge border border-cinabrio/40 bg-cinabrio-suave
+                            px-4 py-3 text-sm text-texto" data-aviso-hoy role="status" hidden>
+                    <svg class="mt-0.5 h-5 w-5 shrink-0 text-cinabrio" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="10"/><path d="M12 7v5l3 2"/>
+                    </svg>
+                    <p>
+                        <strong class="text-cinabrio">Nota:</strong> Estás por realizar tu compra para el
+                        <strong>día de hoy</strong>, toma en cuenta tu hora de llegada. El zoológico cierra a las
+                        <strong>{{ config('taquilla.horario.cierre') }} hrs</strong> y la venta en línea para hoy
+                        finaliza a las <strong>{{ config('taquilla.compra.hora_corte_mismo_dia') }} hrs</strong>.
+                    </p>
+                </div>
 
                 {{-- El aviso va junto al calendario, no solo arriba de la página:
                      quien llega hasta el botón de pago ya no ve el encabezado. --}}
@@ -130,6 +140,20 @@
             <p class="mb-3 text-sm font-medium text-cinabrio" data-falta="personas" role="alert" hidden>
                 Indica al menos una persona en alguna tarifa.
             </p>
+
+            {{-- Una sola vez para toda la compra (2026-10-27): el grupo llega
+                 junto. Obligatoria si hay personas (la usan las estadísticas);
+                 con cuenta llega precargada desde el perfil. --}}
+            @php $errorProcedencia = $errors->first('id_pais') ?: $errors->first('id_estado') ?: $errors->first('id_municipio'); @endphp
+            <div class="card mb-3" data-procedencia-compra>
+                <p class="mb-2 text-sm font-medium">¿De dónde nos visitan?</p>
+                <x-procedencia compacto :valores="$procedenciaCliente"
+                               :paises="$paises" :estados="$estados" :municipios="$municipios" />
+                <p class="mt-2 text-xs font-medium text-cinabrio" data-falta="procedencia" role="alert"
+                   @unless ($errorProcedencia) hidden @endunless>
+                    {{ $errorProcedencia ?: 'Indica de dónde nos visitan.' }}
+                </p>
+            </div>
 
             <div class="grid gap-3">
                 @foreach ($rubros as $i => $rubro)
@@ -157,16 +181,6 @@
                                             :valor="old('renglones.' . $i . '.cant_mujer', 0)" />
                             </div>
                         </div>
-
-                        {{-- Obligatoria en las tarifas que llevan personas (la
-                             usan las estadísticas). Con cuenta llega precargada
-                             desde el perfil. --}}
-                        <p class="mb-2 mt-3 text-xs text-texto-suave">¿De dónde nos visitan?</p>
-                        <x-procedencia compacto nombre="renglones[{{ $i }}]" :valores="$procedenciaCliente"
-                                       :paises="$paises" :estados="$estados" :municipios="$municipios" />
-                        <p class="mt-2 text-xs font-medium text-cinabrio" data-falta="procedencia" role="alert" hidden>
-                            Indica de dónde vienen las personas de esta tarifa.
-                        </p>
                     </div>
                 @endforeach
             </div>
@@ -199,8 +213,11 @@
             <p class="titulo mb-3 text-[11px] text-texto-suave">Ten esto en cuenta</p>
             <ul class="space-y-1.5 text-xs leading-relaxed text-texto-suave">
                 <li>El tipo de visitante se valida en el acceso. Si no corresponde, ahí se paga el boleto.</li>
-                <li>Tercera edad presenta INAPAM y estudiante presenta credencial.</li>
-                <li>Niño Pavón entra gratis hasta 1.20 m de estatura.</li>
+                {{-- Salen del requisito de cada tarifa a la venta (2026-10-27):
+                     dar de baja un rubro quita su línea sin tocar esta vista. --}}
+                @foreach ($rubros->whereNotNull('requisito') as $rubro)
+                    <li><strong class="text-texto">{{ $rubro->tipo }}:</strong> {{ $rubro->requisito }}</li>
+                @endforeach
                 <li>El código QR llega por correo. Si no lo ves, revisa spam o correo no deseado.</li>
                 <li>
                     Los boletos valen solo para la fecha elegida. Al pagar aceptas las
@@ -373,26 +390,19 @@
                         .map((campo) => fijar(campo, campo.value))
                         .every((n) => n === 0);
 
-                    // La procedencia solo se exige en las tarifas con personas.
-                    // Los selectores apagados no cuentan: ahí no aplica.
-                    let avisoProcedencia = null;
-
-                    form.querySelectorAll('[data-procedencia]').forEach((grupo) => {
-                        const tarjeta = grupo.closest('.card');
-                        const aviso = tarjeta.querySelector('[data-falta="procedencia"]');
-                        const conPersonas = Array.from(tarjeta.querySelectorAll('[data-cantidad]'))
-                            .some((campo) => (parseInt(campo.value, 10) || 0) > 0);
-                        const incompleta = conPersonas && Array.from(grupo.querySelectorAll('select'))
-                            .some((s) => !s.disabled && s.value === '');
-
-                        aviso.hidden = !incompleta;
-                        if (incompleta) avisoProcedencia ??= aviso;
-                    });
+                    // La procedencia solo se exige si hay personas. Los
+                    // selectores apagados no cuentan: ahí no aplica.
+                    const avisoProcedencia = form.querySelector('[data-falta="procedencia"]');
+                    const sinProcedencia = !sinPersonas && Array.from(
+                        form.querySelectorAll('[data-procedencia-compra] select'),
+                    ).some((s) => !s.disabled && s.value === '');
 
                     avisoFecha.hidden = !sinFecha;
                     avisoPersonas.hidden = !sinPersonas;
+                    avisoProcedencia.hidden = !sinProcedencia;
 
-                    const primero = sinFecha ? avisoFecha : (sinPersonas ? avisoPersonas : avisoProcedencia);
+                    const primero = sinFecha ? avisoFecha
+                        : (sinPersonas ? avisoPersonas : (sinProcedencia ? avisoProcedencia : null));
 
                     if (primero) {
                         e.preventDefault();

@@ -48,6 +48,12 @@ Route::middleware('guard.exclusivo:cliente')->group(function () {
     Route::get('/ingresar',  [ClienteAuthController::class, 'mostrarIngreso'])->name('portal.ingresar');
     Route::post('/ingresar', [ClienteAuthController::class, 'ingresar'])->middleware('throttle:10,1');
 
+    // ¿Olvidaste tu contraseña? (2026-10-27). Solo clientes del portal.
+    Route::get('/recuperar',  [ClienteAuthController::class, 'mostrarRecuperar'])->name('portal.recuperar');
+    Route::post('/recuperar', [ClienteAuthController::class, 'enviarEnlace'])->middleware('throttle:3,10');
+    Route::get('/recuperar/{token}', [ClienteAuthController::class, 'mostrarRestablecer'])->name('portal.restablecer');
+    Route::post('/recuperar/{token}', [ClienteAuthController::class, 'restablecer'])->middleware('throttle:5,10');
+
     // Google OAuth. El controlador responde 404 si no hay credenciales
     // configuradas, así que el portal funciona igual sin ellas.
     Route::get('/auth/google/redirect', [GoogleAuthController::class, 'redirigir'])->name('portal.google');

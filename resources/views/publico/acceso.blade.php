@@ -21,6 +21,8 @@
                 <div class="mt-5 grid gap-2 md:mt-auto md:pt-5">
                     <a href="{{ route('portal.ingresar') }}" class="btn-primary w-full">Ingresar</a>
                     <a href="{{ route('portal.registro') }}" class="btn-outline w-full">Crear cuenta</a>
+                    <a href="{{ route('portal.recuperar') }}"
+                       class="mt-1 text-center text-sm text-jade hover:underline">¿Olvidaste tu contraseña?</a>
                 </div>
             </div>
 

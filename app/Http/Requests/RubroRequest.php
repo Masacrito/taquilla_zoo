@@ -25,6 +25,7 @@ class RubroRequest extends FormRequest
         return [
             'tipo'               => ['required', 'string', 'max:80'],
             'descripcion'        => ['nullable', 'string', 'max:2000'],
+            'requisito'          => ['nullable', 'string', 'max:160'],
             'id_nacionalidad'    => ['required', 'exists:nacionalidades,id'],
             'id_subnacionalidad' => ['required', 'exists:subnacionalidades,id'],
             'id_tipo_acceso'     => ['required', 'exists:tipos_acceso,id'],
@@ -85,6 +86,7 @@ class RubroRequest extends FormRequest
         return [
             'tipo'               => $this->string('tipo')->trim()->value(),
             'descripcion'        => $this->input('descripcion'),
+            'requisito'          => $this->string('requisito')->trim()->value() ?: null,
             'id_nacionalidad'    => $this->integer('id_nacionalidad'),
             'id_subnacionalidad' => $this->integer('id_subnacionalidad'),
             'id_tipo_acceso'     => $this->integer('id_tipo_acceso'),

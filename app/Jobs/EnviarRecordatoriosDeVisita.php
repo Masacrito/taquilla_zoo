@@ -13,16 +13,21 @@ use Illuminate\Support\Facades\Mail;
 /**
  * Recuerda la visita a quien tiene boletos pagados y sin usar (2026-10-05).
  *
- * Hay dos avisos y cada uno corre una vez al día (routes/console.php):
+ * Hay dos avisos (routes/console.php):
  *
- *   - `vispera`:   la tarde anterior, para las visitas de mañana.
- *   - `mismo_dia`: la mañana de la visita, para las de hoy.
+ *   - `vispera`:   una vez, la tarde anterior, para las visitas de mañana.
+ *   - `mismo_dia`: cada 15 minutos entre la hora configurada y el corte de
+ *     venta, para las de hoy (2026-10-27). Así también lo recibe quien
+ *     compra por la mañana para el mismo día.
  *
  * Reglas:
  *   - Solo compras `pagada`: si ya entró parte del grupo, están en el
  *     zoológico y el aviso sobra.
- *   - No se recuerda una compra hecha el mismo día del aviso: esa persona
- *     acaba de recibir su comprobante.
+ *   - No se recuerda una compra de hace menos de una hora (2026-10-27; antes
+ *     era «de hoy»): esa persona acaba de recibir su comprobante. Se mide
+ *     con `fecha_compra`, que el pago reinicia y queda a menos de 15 minutos
+ *     del cobro. Quien compra para hoy pasadas las 14:30 ya no lo alcanza;
+ *     su comprobante trae el aviso de que la visita es hoy.
  *   - Si el día se cerró después de vender (contingencia), no se avisa: decir
  *     «te esperamos» sería mentir.
  *
@@ -36,6 +41,9 @@ class EnviarRecordatoriosDeVisita implements ShouldQueue
 
     public const VISPERA   = 'vispera';
     public const MISMO_DIA = 'mismo_dia';
+
+    /** Tiempo desde la compra antes de recordarla. */
+    public const MINUTOS_DE_GRACIA = 60;
 
     private const COLUMNA = [
         self::VISPERA   => 'recordatorio_vispera_en',
@@ -62,7 +70,7 @@ class EnviarRecordatoriosDeVisita implements ShouldQueue
         $compras = Compra::with('cliente')
             ->where('estado', Compra::PAGADA)
             ->whereDate('fecha_visita', $visita)
-            ->where('fecha_compra', '<', now()->startOfDay())
+            ->where('fecha_compra', '<=', now()->subMinutes(self::MINUTOS_DE_GRACIA))
             ->whereNull($columna)
             ->get();
 

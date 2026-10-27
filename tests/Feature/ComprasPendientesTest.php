@@ -87,8 +87,8 @@ class ComprasPendientesTest extends TestCase
                 'id_rubro'    => $this->rubro->id,
                 'cant_hombre' => $hombres,
                 'cant_mujer'  => 0,
-                ...$this->procedencia(),
             ]],
+            ...$this->procedencia(),
         ];
     }
 

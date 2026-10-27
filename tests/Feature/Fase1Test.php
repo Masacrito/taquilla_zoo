@@ -76,6 +76,16 @@ class Fase1Test extends TestCase
         $this->assertSame('$40.50', $rubro->precioFormateado());
     }
 
+    public function test_el_requisito_del_rubro_se_guarda_y_vacio_queda_en_null(): void
+    {
+        $this->actingAs($this->admin(), 'web')
+            ->post('/admin/rubros', $this->datosRubro(['requisito' => '  Presenta INAPAM.  ']));
+        $this->post('/admin/rubros', $this->datosRubro(['tipo' => 'Niños', 'requisito' => '']));
+
+        $this->assertSame('Presenta INAPAM.', Rubro::where('tipo', 'Adulto nacional')->value('requisito'));
+        $this->assertNull(Rubro::where('tipo', 'Niños')->value('requisito'));
+    }
+
     public function test_un_rubro_gratis_con_precio_es_rechazado(): void
     {
         $this->actingAs($this->admin(), 'web')

@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
+use App\Mail\RestablecerContrasena;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Mail;
 
 /**
  * Visitante del portal público. Se autentica con el guard `cliente`.
@@ -65,6 +67,23 @@ class Cliente extends Authenticatable
     public function correoVerificado(): bool
     {
         return $this->correo_verificado_en !== null;
+    }
+
+    /**
+     * El broker de contraseñas busca `email`; aquí la columna es `correo`.
+     */
+    public function getEmailForPasswordReset(): string
+    {
+        return $this->correo;
+    }
+
+    /**
+     * Enlace de «¿Olvidaste tu contraseña?» (2026-10-27). Correo propio en
+     * lugar de la notificación en inglés que trae Laravel.
+     */
+    public function sendPasswordResetNotification(#[\SensitiveParameter] $token): void
+    {
+        Mail::to($this->correo)->queue(new RestablecerContrasena($token));
     }
 
     /**

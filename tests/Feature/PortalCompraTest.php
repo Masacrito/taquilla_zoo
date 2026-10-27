@@ -72,8 +72,8 @@ class PortalCompraTest extends TestCase
                 'id_rubro'    => $this->rubro->id,
                 'cant_hombre' => $hombres,
                 'cant_mujer'  => $mujeres,
-                ...$this->procedencia(),
             ]],
+            ...$this->procedencia(),
         ];
     }
 

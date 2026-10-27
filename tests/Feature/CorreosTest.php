@@ -70,7 +70,8 @@ class CorreosTest extends TestCase
 
         $this->actingAs($cliente, 'cliente')->post('/comprar', [
             'fecha_visita' => $this->fechaVisita,
-            'renglones'    => [['id_rubro' => $this->rubro->id, 'cant_hombre' => 1, 'cant_mujer' => 1, ...$this->procedencia()]],
+            'renglones'    => [['id_rubro' => $this->rubro->id, 'cant_hombre' => 1, 'cant_mujer' => 1]],
+            ...$this->procedencia(),
         ]);
 
         $compra = Compra::firstOrFail();
@@ -165,7 +166,8 @@ class CorreosTest extends TestCase
         $cliente = $this->cliente();
         $this->actingAs($cliente, 'cliente')->post('/comprar', [
             'fecha_visita' => $this->fechaVisita,
-            'renglones'    => [['id_rubro' => $this->rubro->id, 'cant_hombre' => 1, 'cant_mujer' => 0, ...$this->procedencia()]],
+            'renglones'    => [['id_rubro' => $this->rubro->id, 'cant_hombre' => 1, 'cant_mujer' => 0]],
+            ...$this->procedencia(),
         ]);
 
         $compra = Compra::firstOrFail();
@@ -206,6 +208,28 @@ class CorreosTest extends TestCase
         $this->assertCount(1, $adjuntos);
         $this->assertSame("comprobante-{$compra->folio}.pdf", $adjuntos[0]->as);
         $this->assertSame('application/pdf', $adjuntos[0]->mime);
+    }
+
+    public function test_el_comprobante_lista_los_requisitos_de_lo_comprado(): void
+    {
+        $this->rubro->update(['requisito' => 'Presenta identificación oficial.']);
+
+        // Otro rubro con requisito, pero que esta compra no lleva.
+        $this->rubro->replicate()->fill(['tipo' => 'Estudiante', 'requisito' => 'Presenta credencial.'])->save();
+
+        $mailable = new ComprobanteCompra($this->comprarYPagar());
+
+        $mailable->assertSeeInHtml('Presenta identificación oficial.');
+        $mailable->assertDontSeeInHtml('Presenta credencial.');
+        $mailable->assertDontSeeInHtml('Tu visita es hoy');
+    }
+
+    public function test_el_comprobante_para_hoy_avisa_del_cierre(): void
+    {
+        $compra = $this->comprarYPagar();
+        $compra->update(['fecha_visita' => today()]);
+
+        (new ComprobanteCompra($compra))->assertSeeInHtml('Tu visita es hoy');
     }
 
     /**

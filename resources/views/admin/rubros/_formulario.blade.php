@@ -26,6 +26,16 @@
         <textarea name="descripcion" rows="2" class="input">{{ $valor('descripcion', $rubro?->descripcion) }}</textarea>
     </div>
 
+    <div class="sm:col-span-2">
+        <label class="label">Requisito para el acceso</label>
+        <input type="text" name="requisito" class="input" maxlength="160"
+               value="{{ $valor('requisito', $rubro?->requisito) }}"
+               placeholder="Ej. Presenta credencial INAPAM">
+        <p class="mt-1 text-xs text-texto-suave">
+            Opcional. Aparece en «Ten esto en cuenta», en el comprobante y en el PDF mientras el rubro esté vigente.
+        </p>
+    </div>
+
     @foreach ([
         ['id_nacionalidad', 'Nacionalidad', $nacionalidades],
         ['id_subnacionalidad', 'Subnacionalidad', $subnacionalidades],

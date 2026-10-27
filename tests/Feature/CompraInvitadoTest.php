@@ -63,7 +63,8 @@ class CompraInvitadoTest extends TestCase
     {
         return [
             'fecha_visita' => $this->fechaVisita,
-            'renglones'    => [['id_rubro' => $this->rubro->id, 'cant_hombre' => 2, 'cant_mujer' => 1, ...$this->procedencia()]],
+            'renglones'    => [['id_rubro' => $this->rubro->id, 'cant_hombre' => 2, 'cant_mujer' => 1]],
+            ...$this->procedencia(),
         ];
     }
 

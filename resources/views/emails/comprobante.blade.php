@@ -8,6 +8,17 @@
 **Pases:** {{ $compra->pases_total }}
 **Total:** {{ $compra->totalFormateado() }}
 
+@if ($compra->fecha_visita->isToday())
+{{-- Hace las veces de recordatorio para quien compra para hoy (2026-10-27):
+     el aviso del mismo día espera una hora desde el pago y quien compra
+     tarde ya no lo alcanzaría. --}}
+<div style="margin:20px 0; padding:14px 16px; background:#fdecea; border:1px solid #e8a3ad;
+            border-radius:10px; color:#1f2933; font-size:14px;">
+<strong style="color:#ae192d;">Tu visita es hoy.</strong> Toma en cuenta tu hora de llegada:
+el zoológico cierra a las <strong>{{ config('taquilla.horario.cierre') }} hrs</strong>.
+</div>
+@endif
+
 ## Tu código de acceso
 
 Presenta este código en el acceso del zoológico. También lo encuentras en el
@@ -37,7 +48,9 @@ Ver mi compra
 
 - **Horario: martes a domingo, 8:30 a 16:00 hrs. Lunes cerrado.**
 - Verifica que el tipo de visitante sea el correcto: se valida en el acceso y, de lo contrario, se paga boleto.
-- Tercera edad presenta INAPAM. Estudiante presenta credencial. Niño Pavón gratis hasta 1.20 m de estatura.
+@foreach ($compra->requisitosDeAcceso() as $tipo => $requisito)
+- **{{ $tipo }}:** {{ $requisito }}
+@endforeach
 - El boleto vale solo para la fecha de visita. Consulta las [políticas de entrega, cancelación y reembolso]({{ route('portal.politicas') }}).
 
 Gracias por tu visita,

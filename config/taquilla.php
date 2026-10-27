@@ -93,6 +93,10 @@ return [
     | día, cinco horas antes del cierre —más tarde ya no alcanzaría a
     | recorrer el zoológico—. Las horas las lee routes/console.php.
     |
+    | Desde 2026-10-27 `mismo_dia` es la hora en que EMPIEZA el aviso del
+    | día: se revisa cada 15 minutos hasta el corte de venta, y cada compra
+    | lo recibe una hora después de pagada.
+    |
     */
 
     'recordatorios' => [

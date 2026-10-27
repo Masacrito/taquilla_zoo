@@ -21,6 +21,10 @@
             </div>
 
             <button type="submit" class="btn-primary w-full">Entrar</button>
+
+            <a href="{{ route('portal.recuperar') }}" class="text-center text-sm text-jade hover:underline">
+                ¿Olvidaste tu contraseña?
+            </a>
         </form>
 
         {{-- Solo si hay credenciales de Google configuradas --}}

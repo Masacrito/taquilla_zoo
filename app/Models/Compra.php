@@ -78,6 +78,23 @@ class Compra extends Model
         return $this->hasMany(CompraDetalle::class, 'id_compra');
     }
 
+    /**
+     * Lo que hay que presentar en el acceso por los rubros de esta compra
+     * (2026-10-27), como [tipo => requisito]. Se lee del rubro y no de una
+     * copia: es una indicación, no un importe. Con withTrashed porque un
+     * rubro dado de baja después de comprar sigue pidiendo lo mismo.
+     *
+     * @return \Illuminate\Support\Collection<string, string>
+     */
+    public function requisitosDeAcceso()
+    {
+        return Rubro::withTrashed()
+            ->whereIn('id', $this->detalle()->select('id_rubro'))
+            ->whereNotNull('requisito')
+            ->orderBy('tipo')
+            ->pluck('requisito', 'tipo');
+    }
+
     public function pagos()
     {
         return $this->hasMany(Pago::class, 'id_compra');

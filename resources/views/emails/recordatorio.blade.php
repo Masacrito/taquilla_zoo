@@ -20,7 +20,9 @@ Ver mi código de acceso
 
 - Ten a la mano tu código QR: está en el comprobante que te enviamos y en el botón de arriba.
 - El boleto vale solo para la fecha de visita. Consulta las [políticas de entrega, cancelación y reembolso]({{ route('portal.politicas') }}).
-- Tercera edad presenta INAPAM. Estudiante presenta credencial.
+@foreach ($compra->requisitosDeAcceso() as $tipo => $requisito)
+- **{{ $tipo }}:** {{ $requisito }}
+@endforeach
 
 Te esperamos,
 **Zoológico Regional Miguel Álvarez del Toro**

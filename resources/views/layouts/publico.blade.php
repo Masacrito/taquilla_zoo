@@ -113,9 +113,7 @@
                     <ul class="space-y-1.5 text-xs leading-relaxed text-texto-suave">
                         <li><strong class="text-texto">Martes a domingo, 8:30 a 16:00 hrs. Lunes cerrado.</strong></li>
                         <li>Si no llega el correo con tu comprobante, revisa la carpeta de spam o correo no deseado.</li>
-                        <li>Verifica que el tipo de visitante sea el correcto: se valida en el acceso y, de lo contrario, se paga boleto.</li>
-                        <li>Tercera edad presenta INAPAM. Estudiante presenta credencial. Niño Pavón gratis hasta 1.20 m de estatura.</li>
-                    </ul>
+                        <li>Verifica que el tipo de visitante sea el correcto: se valida en el acceso y, de lo contrario, se paga boleto.</li>                    </ul>
                 </div>
 
                 <div>

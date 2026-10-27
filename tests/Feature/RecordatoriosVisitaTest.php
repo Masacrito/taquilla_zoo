@@ -90,12 +90,44 @@ class RecordatoriosVisitaTest extends TestCase
         $this->compra('zm-sin-pagar', self::MANANA, ['estado' => Compra::PENDIENTE_PAGO]);
         $this->compra('zm-cancelada', self::MANANA, ['estado' => Compra::CANCELADA]);
         $this->compra('zm-ya-entro', self::MANANA, ['estado' => Compra::ACCESO_PARCIAL, 'pases_usados' => 1]);
-        // Comprada hoy mismo: acaba de recibir su comprobante.
-        $this->compra('zm-reciente', self::MANANA, ['fecha_compra' => now()->subHour()]);
+        // Comprada hace menos de una hora: acaba de recibir su comprobante.
+        $this->compra('zm-reciente', self::MANANA, ['fecha_compra' => now()->subMinutes(40)]);
 
         $this->correr(EnviarRecordatoriosDeVisita::VISPERA);
 
         Mail::assertNothingQueued();
+    }
+
+    public function test_quien_compra_por_la_manana_para_hoy_recibe_el_aviso_una_hora_despues(): void
+    {
+        Carbon::setTestNow(self::HOY . ' 10:00:00');
+        $this->compra('zm-manana-hoy', self::HOY, ['fecha_compra' => now()]);
+
+        Carbon::setTestNow(self::HOY . ' 10:45:00');
+        $this->correr(EnviarRecordatoriosDeVisita::MISMO_DIA);
+        Mail::assertNothingQueued();
+
+        Carbon::setTestNow(self::HOY . ' 11:00:00');
+        $this->correr(EnviarRecordatoriosDeVisita::MISMO_DIA);
+        $this->correr(EnviarRecordatoriosDeVisita::MISMO_DIA);
+        Mail::assertQueued(RecordatorioVisita::class, 1);
+    }
+
+    public function test_la_vispera_incluye_compras_de_hoy_con_una_hora_de_pagadas(): void
+    {
+        $this->compra('zm-mediodia', self::MANANA, ['fecha_compra' => self::HOY . ' 12:00:00']);
+
+        $this->correr(EnviarRecordatoriosDeVisita::VISPERA);
+
+        Mail::assertQueued(RecordatorioVisita::class, 1);
+    }
+
+    public function test_el_aviso_del_dia_corre_cada_15_minutos(): void
+    {
+        $evento = collect(app(\Illuminate\Console\Scheduling\Schedule::class)->events())
+            ->firstWhere('description', 'recordatorios-mismo-dia');
+
+        $this->assertSame('*/15 * * * *', $evento->expression);
     }
 
     public function test_si_el_dia_se_cerro_no_se_avisa(): void

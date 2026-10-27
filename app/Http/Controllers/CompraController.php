@@ -67,7 +67,7 @@ class CompraController extends Controller
             'correoInvitado'  => Auth::guard('cliente')->check() ? null : $this->invitado->correo(),
             'meses'           => $this->rejillaDeMeses($abiertos),
             'hayDiasAbiertos' => $abiertos->isNotEmpty(),
-            // Con cuenta, la procedencia de cada tarifa arranca con la del perfil.
+            // Con cuenta, la procedencia de la compra arranca con la del perfil.
             'procedenciaCliente' => Auth::guard('cliente')->user()?->only(['id_pais', 'id_estado', 'id_municipio']) ?? [],
             'paises'   => Pais::activos()->orderBy('nombre')->get(),
             'estados'  => Estado::activos()->orderBy('nombre')->get(),
@@ -98,7 +98,7 @@ class CompraController extends Controller
 
         // Solo al comprar, no al cotizar: el total estimado debe poder verse
         // antes de terminar de llenar la procedencia.
-        $datos['renglones'] = $this->exigirProcedencia($datos['renglones']);
+        $datos['renglones'] = $this->exigirProcedencia($datos);
 
         // Se vuelve a cotizar aquí: lo que el navegador vio es irrelevante.
         $cotizacion = $this->cotizador->cotizar($datos['renglones'], $datos['fecha_visita']);
@@ -298,9 +298,10 @@ class CompraController extends Controller
             'renglones.*.id_rubro'        => ['required', 'exists:rubros,id'],
             'renglones.*.cant_hombre'     => ['nullable', 'integer', 'min:0', "max:{$tope}"],
             'renglones.*.cant_mujer'      => ['nullable', 'integer', 'min:0', "max:{$tope}"],
-            'renglones.*.id_pais'         => ['nullable', 'exists:paises,id'],
-            'renglones.*.id_estado'       => ['nullable', 'exists:estados,id'],
-            'renglones.*.id_municipio'    => ['nullable', 'exists:municipios,id'],
+            // Una sola procedencia para toda la compra (2026-10-27).
+            'id_pais'                     => ['nullable', 'exists:paises,id'],
+            'id_estado'                   => ['nullable', 'exists:estados,id'],
+            'id_municipio'                => ['nullable', 'exists:municipios,id'],
         ], [
             'fecha_visita.required' => 'Elige en el calendario el día de tu visita.',
             'fecha_visita.after_or_equal' => 'La venta de boletos para ese día ya cerró. Elige otro día en el calendario.',
@@ -313,19 +314,26 @@ class CompraController extends Controller
     }
 
     /**
-     * La procedencia es obligatoria en cada tarifa que lleva personas
-     * (2026-10-05, estadísticas). Las tarifas en cero se dejan como vienen:
-     * el cotizador las descarta.
+     * La procedencia es obligatoria si la compra lleva personas (2026-10-05,
+     * estadísticas). Se pide una sola vez para toda la compra (2026-10-27):
+     * un grupo llega junto y no va a separar sus compras por origen. Se copia
+     * a cada renglón porque compra_detalle la guarda por tarifa y de ahí la
+     * leen las estadísticas.
      */
-    private function exigirProcedencia(array $renglones): array
+    private function exigirProcedencia(array $datos): array
     {
-        foreach ($renglones as $i => $renglon) {
-            if ((int) ($renglon['cant_hombre'] ?? 0) + (int) ($renglon['cant_mujer'] ?? 0) > 0) {
-                $renglones[$i] = [...$renglon, ...$this->procedencia->exigir($renglon, "renglones.{$i}.")];
-            }
+        $renglones = $datos['renglones'];
+
+        $conPersonas = collect($renglones)
+            ->contains(fn ($r) => (int) ($r['cant_hombre'] ?? 0) + (int) ($r['cant_mujer'] ?? 0) > 0);
+
+        if (! $conPersonas) {
+            return $renglones;
         }
 
-        return $renglones;
+        $procedencia = $this->procedencia->exigir($datos);
+
+        return array_map(fn ($r) => [...$r, ...$procedencia], $renglones);
     }
 
     /**

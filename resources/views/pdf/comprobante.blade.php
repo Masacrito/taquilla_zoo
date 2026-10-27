@@ -157,7 +157,9 @@
         <strong>Antes de tu visita</strong><br>
         • Horario: martes a domingo, 8:30 a 16:00 hrs. Lunes cerrado.<br>
         • Verifica que el tipo de visitante sea el correcto: se valida en el acceso y, de lo contrario, se paga boleto.<br>
-        • Tercera edad presenta INAPAM. Estudiante presenta credencial. Niño Pavón gratis hasta 1.20 m de estatura.<br>
+        @foreach ($compra->requisitosDeAcceso() as $tipo => $requisito)
+            • {{ $tipo }}: {{ $requisito }}<br>
+        @endforeach
         • Este comprobante es válido únicamente para la fecha de visita indicada.
     </div>
 

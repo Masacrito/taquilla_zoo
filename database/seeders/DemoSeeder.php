@@ -63,25 +63,26 @@ class DemoSeeder extends Seeder
         $precio = self::TARIFAS_OFICIALES;
 
         $rubros = [
-            ['Adulto',       'Visitante mayor de edad.',                          $nacional, $sub('ADULTO NACIONAL'),       $pago, $precio['Adulto']],
-            ['Niños',        'De 3 a 12 años.',                                   $nacional, $sub('NIÑO NACIONAL'),         $pago, $precio['Niños']],
-            ['Tercera Edad', 'Adultos mayores. Se presenta credencial INAPAM.',   $nacional, $sub('TERCERA EDAD NACIONAL'), $pago, $precio['Tercera Edad']],
+            ['Adulto',       'Visitante mayor de edad.',                          null,                          $nacional, $sub('ADULTO NACIONAL'),       $pago, $precio['Adulto']],
+            ['Niños',        'De 3 a 12 años.',                                   null,                          $nacional, $sub('NIÑO NACIONAL'),         $pago, $precio['Niños']],
+            ['Tercera Edad', 'Adultos mayores. Se presenta credencial INAPAM.',   'Presenta credencial INAPAM.', $nacional, $sub('TERCERA EDAD NACIONAL'), $pago, $precio['Tercera Edad']],
 
             // Estos operaban antes y por ahora no se cobran. Se dejan a la
             // vista para reactivarlos, pero COMENTADOS a propósito: sus
             // precios nunca se confirmaron con el área operativa y sembrar
             // cifras inventadas es peor que no tenerlas.
             //
-            // ['Adulto extranjero', 'Visitante mayor de edad sin residencia en México.', $extranjero, $sub('ADULTO EXTRANJERO'), $pago,   0],
-            // ['Niño extranjero',   'De 3 a 12 años, sin residencia en México.',         $extranjero, $sub('NIÑO EXTRANJERO'),   $pago,   0],
-            // ['Niño Pavón',        'Menores de 1.20 m de estatura. Acceso sin costo.',  $nacional,   $sub('NIÑO NACIONAL'),     $gratis, 0],
+            // ['Adulto extranjero', 'Visitante mayor de edad sin residencia en México.', null, $extranjero, $sub('ADULTO EXTRANJERO'), $pago,   0],
+            // ['Niño extranjero',   'De 3 a 12 años, sin residencia en México.',         null, $extranjero, $sub('NIÑO EXTRANJERO'),   $pago,   0],
+            // ['Niño Pavón',        'Menores de 1.20 m de estatura. Acceso sin costo.',  'Gratis hasta 1.20 m de estatura.', $nacional, $sub('NIÑO NACIONAL'), $gratis, 0],
         ];
 
-        foreach ($rubros as [$tipo, $descripcion, $nacionalidad, $subnacionalidad, $tipoAcceso, $centavos]) {
+        foreach ($rubros as [$tipo, $descripcion, $requisito, $nacionalidad, $subnacionalidad, $tipoAcceso, $centavos]) {
             Rubro::updateOrCreate(
                 ['tipo' => $tipo],
                 [
                     'descripcion'        => $descripcion,
+                    'requisito'          => $requisito,
                     'id_nacionalidad'    => $nacionalidad->id,
                     'id_subnacionalidad' => $subnacionalidad->id,
                     'id_tipo_acceso'     => $tipoAcceso->id,

@@ -82,6 +82,13 @@
         color: var(--color-texto);
         font-family: var(--font-sans);
     }
+
+    /* Tailwind 4 deja los <button> con cursor de flecha; botones sueltos
+       como «Salir» no mostraban la manita (2026-10-27). */
+    button:not(:disabled),
+    [role="button"]:not(:disabled) {
+        cursor: pointer;
+    }
 }
 
 /*

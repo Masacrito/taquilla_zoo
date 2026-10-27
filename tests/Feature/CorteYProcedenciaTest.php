@@ -79,7 +79,8 @@ class CorteYProcedenciaTest extends TestCase
     {
         return [
             'fecha_visita' => $fecha,
-            'renglones'    => [['id_rubro' => $this->rubro->id, 'cant_hombre' => 1, 'cant_mujer' => 1, ...$procedencia]],
+            'renglones'    => [['id_rubro' => $this->rubro->id, 'cant_hombre' => 1, 'cant_mujer' => 1]],
+            ...$procedencia,
         ];
     }
 
@@ -148,11 +149,11 @@ class CorteYProcedenciaTest extends TestCase
         $this->actingAs($this->cliente(), 'cliente');
 
         $this->post('/comprar', $this->carrito(self::MANANA, []))
-            ->assertSessionHasErrors('renglones.0.id_pais');
+            ->assertSessionHasErrors('id_pais');
         $this->post('/comprar', $this->carrito(self::MANANA, ['id_pais' => $this->mexico()]))
-            ->assertSessionHasErrors('renglones.0.id_estado');
+            ->assertSessionHasErrors('id_estado');
         $this->post('/comprar', $this->carrito(self::MANANA, ['id_pais' => $this->mexico(), 'id_estado' => $this->chiapas()]))
-            ->assertSessionHasErrors('renglones.0.id_municipio');
+            ->assertSessionHasErrors('id_municipio');
 
         $this->assertSame(0, Compra::count());
     }
@@ -173,6 +174,55 @@ class CorteYProcedenciaTest extends TestCase
         $this->assertNotNull($detalle->id_pais);
         $this->assertNull($detalle->id_estado);
         $this->assertNull($detalle->id_municipio);
+    }
+
+    public function test_una_sola_procedencia_llega_a_todas_las_tarifas(): void
+    {
+        $this->actingAs($this->cliente(), 'cliente');
+
+        $ninos = $this->rubro->replicate()->fill(['tipo' => 'Niños', 'precio_centavos' => 3000]);
+        $ninos->save();
+
+        $municipio = Municipio::where('id_estado', $this->chiapas())->value('id');
+
+        $this->post('/comprar', [
+            'fecha_visita' => self::MANANA,
+            'renglones'    => [
+                ['id_rubro' => $this->rubro->id, 'cant_hombre' => 2, 'cant_mujer' => 0],
+                ['id_rubro' => $ninos->id, 'cant_hombre' => 0, 'cant_mujer' => 1],
+            ],
+            'id_pais' => $this->mexico(), 'id_estado' => $this->chiapas(), 'id_municipio' => $municipio,
+        ])->assertSessionHasNoErrors();
+
+        $detalle = Compra::firstOrFail()->detalle;
+
+        $this->assertCount(2, $detalle);
+        $this->assertSame([$municipio], $detalle->pluck('id_municipio')->unique()->values()->all());
+    }
+
+    public function test_la_compra_pide_la_procedencia_una_sola_vez(): void
+    {
+        $this->actingAs($this->cliente(), 'cliente');
+
+        // Con dos tarifas: antes salía una pregunta por cada una.
+        $this->rubro->replicate()->fill(['tipo' => 'Niños'])->save();
+
+        $html = $this->get('/comprar')->assertOk()->getContent();
+
+        $this->assertSame(1, substr_count($html, '¿De dónde nos visitan?'));
+    }
+
+    public function test_ten_en_cuenta_muestra_solo_requisitos_de_rubros_a_la_venta(): void
+    {
+        $this->actingAs($this->cliente(), 'cliente');
+
+        $this->rubro->update(['requisito' => 'Presenta credencial INAPAM.']);
+        $this->rubro->replicate()->fill(['tipo' => 'Estudiante', 'requisito' => 'Presenta credencial escolar.', 'activo' => false])->save();
+
+        $this->get('/comprar')
+            ->assertSee('Presenta credencial INAPAM.')
+            ->assertDontSee('Presenta credencial escolar.')
+            ->assertDontSee('Niño Pavón');
     }
 
     public function test_la_compra_precarga_la_procedencia_del_perfil(): void

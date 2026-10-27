@@ -107,11 +107,19 @@ return [
     // Administrador desde el panel. Este broker queda declarado por coherencia
     // con `defaults.passwords`, pero no hay flujo que lo use.
     //
-    // El broker de `clientes` se agrega en Fase 2, junto con el registro y la
-    // verificación de correo.
+    // El de `clientes` sí se usa (2026-10-27): «¿Olvidaste tu contraseña?» del
+    // portal. Enlace por correo que vence en una hora; un enlace nuevo por
+    // minuto como máximo.
     'passwords' => [
         'cuentas' => [
             'provider' => 'cuentas',
+            'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
+            'expire' => 60,
+            'throttle' => 60,
+        ],
+
+        'clientes' => [
+            'provider' => 'clientes',
             'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
             'expire' => 60,
             'throttle' => 60,

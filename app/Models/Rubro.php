@@ -22,6 +22,7 @@ class Rubro extends Model
     protected $fillable = [
         'tipo',
         'descripcion',
+        'requisito',
         'id_nacionalidad',
         'id_subnacionalidad',
         'id_tipo_acceso',
